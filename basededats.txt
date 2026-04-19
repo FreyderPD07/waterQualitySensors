@@ -1,0 +1,13 @@
+clienteRuta: mongodb://localhost:27017/
+client["monitoreoAgua"]
+coleccion = ["lecturas"]
+
+
+{
+  "fecha": { "$date": "2026-04-19T10:00:00Z" },
+  "dispositivo": "Tanque_Principal_01",
+  "ph": 7.2,
+  "turbidez": 4.5,
+  "oxigeno_disuelto": 8.1,
+  "nitritos": 0.02
+}

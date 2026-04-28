@@ -4,9 +4,11 @@ import time
 from datetime import datetime
 
 try:
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client["monitoreoAgua"]
-    coleccion = db["lecturas"]
+    #para crear una nueva base de datos y coleccion directamente ingresamos nuevos nombre
+    #y autematicamente se crea la base de datos y coleccion en mongoDB Atlas 
+    client = pymongo.MongoClient("mongodb+srv://QualitySensor_db_user:QveLwCr4ugoIJwpd@clustersensores0.ylsfqri.mongodb.net/?appName=ClusterSensores0")
+    db = client["monitoreoAguaSimulado"]
+    coleccion = db["lecturaSimulado"]
     print("conexion exitosa a Mongo DB")
 except Exception as e:
     print(f"Error al conectar a Mongo DB: {e}")

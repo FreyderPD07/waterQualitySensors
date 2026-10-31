@@ -18,26 +18,42 @@ El sistema está diseñado para cubrir tres responsabilidades principales:
 
 Se aplica una **Arquitectura en Capas (Layered Architecture)** con el patrón **MVC** en la capa de presentación. Este enfoque permite separar claramente las responsabilidades, facilitar el mantenimiento y escalar cada capa de forma independiente.
 
-```
-┌──────────────────────────────────────────────┐
-│           CAPA DE PRESENTACIÓN               │
-│  Views: Dashboard, Gráficas, Reportes        │
-│  Controllers: Solicitudes HTTP / WebSocket   │
-├──────────────────────────────────────────────┤
-│           CAPA DE NEGOCIO (Services)         │
-│  Procesamiento de lecturas                   │
-│  Motor de alertas y umbrales                 │
-│  Análisis de tendencias                      │
-├──────────────────────────────────────────────┤
-│           CAPA DE DATOS (Repositories)       │
-│  Modelos de datos (sensores, lecturas)       │
-│  Acceso a base de datos NoSQL                │
-├──────────────────────────────────────────────┤
-│           CAPA DE ADQUISICIÓN (IoT Gateway)  │
-│  Recepción de paquetes LoRaWAN               │
-│  Validación y normalización de tramas        │
-│  Publicación interna vía MQTT / HTTP         │
-└──────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph PRESENTACION["Capa de Presentación"]
+        direction LR
+        P1["Views\nDashboard · Gráficas · Reportes"]
+        P2["Controllers\nHTTP · WebSocket"]
+    end
+
+    subgraph NEGOCIO["Capa de Negocio — Services"]
+        direction LR
+        N1["Procesamiento\nde lecturas"]
+        N2["Motor de alertas\ny umbrales"]
+        N3["Análisis\nde tendencias"]
+    end
+
+    subgraph DATOS["Capa de Datos — Repositories"]
+        direction LR
+        D1["Modelos\nSensores · Lecturas · Alertas"]
+        D2["Acceso NoSQL\nMongoDB / InfluxDB"]
+    end
+
+    subgraph ADQUISICION["Capa de Adquisición — IoT Gateway"]
+        direction LR
+        A1["Recepción\npaquetes LoRaWAN"]
+        A2["Validación y\nnormalización de tramas"]
+        A3["Publicación interna\nMQTT · HTTP"]
+    end
+
+    PRESENTACION -->|consulta servicios| NEGOCIO
+    NEGOCIO      -->|lee y escribe| DATOS
+    DATOS        -->|consume datos normalizados| ADQUISICION
+
+    style PRESENTACION fill:#1e3a5f,stroke:#4a90d9,stroke-width:2px,color:#ffffff
+    style NEGOCIO      fill:#1a3a2a,stroke:#4caf50,stroke-width:2px,color:#ffffff
+    style DATOS        fill:#3a2a1a,stroke:#ff9800,stroke-width:2px,color:#ffffff
+    style ADQUISICION  fill:#3a1a2a,stroke:#e91e8c,stroke-width:2px,color:#ffffff
 ```
 
 ### ¿Por qué esta arquitectura?
@@ -98,18 +114,28 @@ Los sensores sumergibles capturan los siguientes parámetros:
 
 ## Flujo de Datos
 
-```
-[Sensor] → [Red LoRaWAN] → [Gateway IoT]
-                                 │
-                          [Normalización]
-                                 │
-                        [Base de Datos NoSQL]
-                                 │
-                     ┌───────────┴───────────┐
-                 [Servicios]           [API / WebSocket]
-              (alertas, análisis)             │
-                                       [Dashboard]
-                                    (gráficas en tiempo real)
+```mermaid
+flowchart TD
+    S1["Sensor pH"]
+    S2["Sensor Turbidez"]
+    S3["Sensor Temperatura"]
+    S4["Sensor Conductividad"]
+    S5["Sensor O₂ Disuelto"]
+
+    GW["Gateway LoRaWAN"]
+    NORM["Normalización de Tramas"]
+    DB[("Base de Datos NoSQL")]
+    SVC["Servicios\n(alertas · análisis · tendencias)"]
+    API["API REST / WebSocket"]
+    DASH["Dashboard\n(gráficas en tiempo real)"]
+
+    S1 & S2 & S3 & S4 & S5 -->|LoRaWAN| GW
+    GW --> NORM
+    NORM --> DB
+    DB --> SVC
+    DB --> API
+    SVC --> API
+    API --> DASH
 ```
 
 ---

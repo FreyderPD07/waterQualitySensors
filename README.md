@@ -1,0 +1,173 @@
+# 💧 Water Quality Sensors — Sistema de Monitoreo de Calidad del Agua
+
+Sistema de telemetría de baja potencia basado en **LoRaWAN** para el monitoreo en tiempo real de parámetros críticos del agua. Captura datos desde sensores sumergibles, los transmite de forma inalámbrica, los almacena en una base de datos NoSQL y los representa visualmente en un dashboard interactivo.
+
+---
+
+## Descripción General
+
+El sistema está diseñado para cubrir tres responsabilidades principales:
+
+1. **Captura de datos** — recibe lecturas desde sensores físicos vía red LoRaWAN.
+2. **Persistencia y organización** — almacena y gestiona la información en una base de datos NoSQL.
+3. **Representación gráfica** — presenta los datos procesados en un dashboard con alertas y tendencias.
+
+---
+
+## Arquitectura del Sistema
+
+Se aplica una **Arquitectura en Capas (Layered Architecture)** con el patrón **MVC** en la capa de presentación. Este enfoque permite separar claramente las responsabilidades, facilitar el mantenimiento y escalar cada capa de forma independiente.
+
+```mermaid
+flowchart TB
+    subgraph PRESENTACION["Capa de Presentación"]
+        direction LR
+        P1["Views\nDashboard · Gráficas · Reportes"]
+        P2["Controllers\nHTTP · WebSocket"]
+    end
+
+    subgraph NEGOCIO["Capa de Negocio — Services"]
+        direction LR
+        N1["Procesamiento\nde lecturas"]
+        N2["Motor de alertas\ny umbrales"]
+        N3["Análisis\nde tendencias"]
+    end
+
+    subgraph DATOS["Capa de Datos — Repositories"]
+        direction LR
+        D1["Modelos\nSensores · Lecturas · Alertas"]
+        D2["Acceso NoSQL\nMongoDB / InfluxDB"]
+    end
+
+    subgraph ADQUISICION["Capa de Adquisición — IoT Gateway"]
+        direction LR
+        A1["Recepción\npaquetes LoRaWAN"]
+        A2["Validación y\nnormalización de tramas"]
+        A3["Publicación interna\nMQTT · HTTP"]
+    end
+
+    PRESENTACION -->|consulta servicios| NEGOCIO
+    NEGOCIO      -->|lee y escribe| DATOS
+    DATOS        -->|consume datos normalizados| ADQUISICION
+
+    style PRESENTACION fill:#1e3a5f,stroke:#4a90d9,stroke-width:2px,color:#ffffff
+    style NEGOCIO      fill:#1a3a2a,stroke:#4caf50,stroke-width:2px,color:#ffffff
+    style DATOS        fill:#3a2a1a,stroke:#ff9800,stroke-width:2px,color:#ffffff
+    style ADQUISICION  fill:#3a1a2a,stroke:#e91e8c,stroke-width:2px,color:#ffffff
+```
+
+### ¿Por qué esta arquitectura?
+
+| Criterio | Decisión |
+|---|---|
+| Separación de responsabilidades | Cada capa tiene un rol único y no se mezclan con las demás |
+| Escalabilidad | Cada capa puede crecer o reemplazarse sin romper las otras |
+| IoT + Web en el mismo sistema | La capa de adquisición desacopla el hardware del resto del software |
+| Representación gráfica | MVC en presentación mantiene limpio el manejo de vistas y datos |
+
+---
+
+## Estructura de Carpetas
+
+```
+waterQualitySensors/
+│
+├── acquisition/              # Capa de adquisición (IoT Gateway)
+│   ├── lorawan_listener.js   # Escucha y recibe paquetes LoRaWAN
+│   ├── payload_parser.js     # Decodifica y valida las tramas de los sensores
+│   └── mqtt_publisher.js     # Publica los datos normalizados internamente
+│
+├── data/                     # Capa de datos
+│   ├── models/               # Definición de esquemas (sensores, lecturas, alertas)
+│   └── repositories/         # Acceso y consultas a la base de datos NoSQL
+│
+├── services/                 # Capa de negocio
+│   ├── reading_service.js    # Lógica de procesamiento de lecturas
+│   ├── alert_service.js      # Evaluación de umbrales y generación de alertas
+│   └── trend_service.js      # Cálculo de tendencias y estadísticas
+│
+├── presentation/             # Capa de presentación (MVC)
+│   ├── controllers/          # Controladores HTTP / WebSocket
+│   ├── views/                # Plantillas o componentes del dashboard
+│   └── routes/               # Definición de rutas de la API y UI
+│
+├── config/                   # Configuración del sistema (DB, red, umbrales)
+├── tests/                    # Pruebas unitarias e integración
+└── README.md
+```
+
+---
+
+## Parámetros Monitoreados
+
+Los sensores sumergibles capturan los siguientes parámetros:
+
+| Parámetro | Unidad | Descripción |
+|---|---|---|
+| pH | — | Nivel de acidez o alcalinidad del agua |
+| Turbidez | NTU | Claridad del agua |
+| Temperatura | °C | Temperatura del cuerpo de agua |
+| Conductividad | µS/cm | Concentración de sales disueltas |
+| Oxígeno Disuelto | mg/L | Nivel de oxígeno disponible en el agua |
+
+---
+
+## Flujo de Datos
+
+```mermaid
+flowchart TD
+    S1["Sensor pH"]
+    S2["Sensor Turbidez"]
+    S3["Sensor Temperatura"]
+    S4["Sensor Conductividad"]
+    S5["Sensor O₂ Disuelto"]
+
+    GW["Gateway LoRaWAN"]
+    NORM["Normalización de Tramas"]
+    DB[("Base de Datos NoSQL")]
+    SVC["Servicios\n(alertas · análisis · tendencias)"]
+    API["API REST / WebSocket"]
+    DASH["Dashboard\n(gráficas en tiempo real)"]
+
+    S1 & S2 & S3 & S4 & S5 -->|LoRaWAN| GW
+    GW --> NORM
+    NORM --> DB
+    DB --> SVC
+    DB --> API
+    SVC --> API
+    API --> DASH
+```
+
+---
+
+## Tecnologías (propuestas)
+
+| Componente | Tecnología sugerida |
+|---|---|
+| Gateway LoRaWAN | The Things Network (TTN) / ChirpStack |
+| Backend | Node.js / Python (FastAPI) |
+| Base de datos | MongoDB o InfluxDB (series de tiempo) |
+| Mensajería interna | MQTT (Mosquitto) |
+| Dashboard | Grafana / React + Chart.js |
+| API | REST + WebSocket |
+
+---
+
+## Estado del Proyecto
+### 1 cuando ya se esta trabajando, 0 cuando no se a  implementado
+
+- [1] Definición de arquitectura
+- [1] Configuración del gateway LoRaWAN
+- [1] Modelos de datos y repositorios
+- [0] Servicios de procesamiento y alertas
+- [0] API REST y WebSocket
+- [0] Dashboard de visualización
+- [0] Pruebas e integración
+
+---
+
+## Notas
+
+- La base de datos NoSQL se elige por su flexibilidad ante estructuras de datos variables provenientes de distintos tipos de sensores.
+- Si la prioridad es análisis temporal (series de tiempo), **InfluxDB** es preferible sobre MongoDB.
+- El sistema está diseñado para ser **extensible**: agregar nuevos tipos de sensores o nuevas vistas no requiere modificar las capas subyacentes.

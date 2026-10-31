@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaterQualitySensors - Dashboard Principal</title>
+    <!-- Hoja de estilos global centralizada -->
+    <link rel="stylesheet" href="../../public/css/styles.css">
+    <!-- Librería para gráficas (Chart.js via CDN o local en public/js/lib) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body class="app-layout">
+
+    <!-- Navegación Superior (Topbar) -->
+    <header class="topbar">
+        <div class="topbar-brand">
+            <span class="topbar-logo" aria-hidden="true">💧</span>
+            <span class="topbar-title">WaterQuality</span>
+        </div>
+
+        <nav class="topbar-nav" aria-label="Navegación del usuario">
+            <span class="topbar-status-indicator" title="Estado de la red IoT">
+                <span class="status-dot status-dot-active"></span> Red LoRaWAN Activa
+            </span>
+            <span class="topbar-user">Operador: <strong id="user-display-name">Freyder</strong></span>
+            <a href="../auth/login.html" class="btn btn-secondary btn-sm">Cerrar Sesión</a>
+        </nav>
+    </header>
+
+    <div class="app-body">
+        <!-- Barra Lateral de Menú Principal (Sidebar) -->
+        <aside class="sidebar">
+            <nav class="sidebar-menu" aria-label="Menú principal">
+                <ul class="menu-list">
+                    <li class="menu-item active">
+                        <a href="index.html" class="menu-link">
+                            <span class="menu-icon">📊</span> Panel General
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="../sensors/readings.html" class="menu-link">
+                            <span class="menu-icon">📡</span> Lecturas de Sensores
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="../alerts/index.html" class="menu-link">
+                            <span class="menu-icon">⚠️</span> Alertas y Umbrales
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="../reports/trends.html" class="menu-link">
+                            <span class="menu-icon">📈</span> Tendencias y Reportes
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="dash-main">
+
+            <!-- Encabezado del Dashboard -->
+            <header class="dash-header">
+                <div>
+                    <h1 class="dash-title">Monitoreo en Tiempo Real</h1>
+                    <p class="dash-subtitle">Estado general del cuerpo de agua y nodos de telemetría</p>
+                </div>
+                <time datetime="2026-10-31" class="dash-timestamp" id="last-update-time">
+                    Última actualización: hace 2 min
+                </time>
+            </header>
+
+            <!-- Sección 1: Tarjetas de Métricas Clave (KPIs) -->
+            <section class="kpi-grid" aria-label="Indicadores principales de calidad">
+                
+                <article class="kpi-card kpi-card-ph">
+                    <header class="kpi-header">
+                        <h2 class="kpi-title">pH Promedio</h2>
+                        <span class="kpi-badge badge-success" id="kpi-ph-status">Óptimo</span>
+                    </header>
+                    <p class="kpi-value" id="kpi-ph-val">7.4</p>
+                    <meter class="kpi-meter" min="0" low="6.5" high="8.5" max="14" value="7.4"></meter>
+                    <footer class="kpi-footer">Rango normal: 6.5 - 8.5</footer>
+                </article>
+
+                <article class="kpi-card kpi-card-turbidity">
+                    <header class="kpi-header">
+                        <h2 class="kpi-title">Turbidez</h2>
+                        <span class="kpi-badge badge-warning" id="kpi-turbidity-status">Moderado</span>
+                    </header>
+                    <p class="kpi-value" id="kpi-turbidity-val">4.2 <span class="kpi-unit">NTU</span></p>
+                    <meter class="kpi-meter" min="0" low="1" high="5" max="10" value="4.2"></meter>
+                    <footer class="kpi-footer">Límite norma: &lt; 5.0 NTU</footer>
+                </article>
+
+                <article class="kpi-card kpi-card-conductivity">
+                    <header class="kpi-header">
+                        <h2 class="kpi-title">Conductividad</h2>
+                        <span class="kpi-badge badge-success" id="kpi-conductivity-status">Normal</span>
+                    </header>
+                    <p class="kpi-value" id="kpi-conductivity-val">310 <span class="kpi-unit">µS/cm</span></p>
+                    <meter class="kpi-meter" min="0" low="100" high="1000" max="2000" value="310"></meter>
+                    <footer class="kpi-footer">Rango esperado: 100 - 1000 µS/cm</footer>
+                </article>
+
+                <article class="kpi-card kpi-card-alerts">
+                    <header class="kpi-header">
+                        <h2 class="kpi-title">Alertas Activas</h2>
+                        <span class="kpi-badge badge-danger" id="kpi-alerts-count">2 Pendientes</span>
+                    </header>
+                    <p class="kpi-value kpi-value-danger" id="kpi-alerts-val">2</p>
+                    <footer class="kpi-footer"><a href="../alerts/index.html">Ver detalle de alertas →</a></footer>
+                </article>
+
+            </section>
+
+            <!-- Sección 2: Gráficas de Monitoreo -->
+            <section class="charts-grid" aria-label="Visualización de datos en gráficos">
+                
+                <article class="chart-card">
+                    <header class="chart-header">
+                        <h2 class="chart-title">Variación de pH y Turbidez (Últimas 24h)</h2>
+                    </header>
+                    <figure class="chart-container">
+                        <canvas id="main-telemetry-chart"></canvas>
+                    </figure>
+                </article>
+
+                <article class="chart-card">
+                    <header class="chart-header">
+                        <h2 class="chart-title">Distribución de Lecturas por Nodo</h2>
+                    </header>
+                    <figure class="chart-container">
+                        <canvas id="nodes-distribution-chart"></canvas>
+                    </figure>
+                </article>
+
+            </section>
+
+            <!-- Sección 3: Tabla Resumen de Últimas Lecturas -->
+            <section class="table-section" aria-label="Resumen de datos recientes">
+                <header class="table-header">
+                    <h2 class="table-title">Últimos Paquetes Recibidos (LoRaWAN)</h2>
+                    <a href="../sensors/readings.html" class="btn btn-outline btn-sm">Ver todas las lecturas</a>
+                </header>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Nodo / Sensor</th>
+                            <th scope="col">pH</th>
+                            <th scope="col">Turbidez</th>
+                            <th scope="col">Conductividad</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Fecha / Hora</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dash-recent-readings-tbody">
+                        <tr>
+                            <td><strong>Nodo 01 - Estación Norte</strong></td>
+                            <td>7.4</td>
+                            <td>3.8 NTU</td>
+                            <td>305 µS/cm</td>
+                            <td><span class="badge badge-success">OK</span></td>
+                            <td><time datetime="2026-10-31T01:00">Hace 5 min</time></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Nodo 02 - Embalse Central</strong></td>
+                            <td>8.6</td>
+                            <td>5.4 NTU</td>
+                            <td>420 µS/cm</td>
+                            <td><span class="badge badge-warning">Advertencia</span></td>
+                            <td><time datetime="2026-10-31T00:55">Hace 10 min</time></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Lógica JS para poblar el Dashboard y Renderizar Gráficas -->
+    <script src="../../public/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaterQualitySensors - Registro de Usuario</title>
+    <!-- Hoja de estilos global centralizada -->
+    <link rel="stylesheet" href="../../public/css/styles.css">
+</head>
+<body class="auth-body">
+
+    <main class="auth-container">
+        <section class="auth-card">
+            
+            <!-- Encabezado de la tarjeta -->
+            <header class="auth-header">
+                <span class="auth-logo-icon" aria-hidden="true">🌊</span>
+                <h1 class="auth-title">Crear Cuenta</h1>
+                <p class="auth-subtitle">Registra un nuevo miembro para la gestión del sistema</p>
+            </header>
+
+            <!-- Alerta de estado dinámico para JS -->
+            <output id="register-alert" class="auth-alert auth-alert-hidden" aria-live="polite"></output>
+
+            <!-- Formulario de registro -->
+            <form id="register-form" class="auth-form" action="#" method="POST" novalidate>
+                
+                <!-- Grupo 1: Datos Personales -->
+                <fieldset class="form-fieldset">
+                    <legend class="form-legend">Información Personal</legend>
+
+                    <p class="form-group">
+                        <label for="register-name" class="form-label">Nombre Completo</label>
+                        <input 
+                            type="text" 
+                            id="register-name" 
+                            name="fullName" 
+                            class="form-input" 
+                            placeholder="Ej. Carlos Mendoza" 
+                            required 
+                            autocomplete="name"
+                        >
+                    </p>
+
+                    <p class="form-group">
+                        <label for="register-email" class="form-label">Correo Electrónico</label>
+                        <input 
+                            type="email" 
+                            id="register-email" 
+                            name="email" 
+                            class="form-input" 
+                            placeholder="carlos@sensores.com" 
+                            required 
+                            autocomplete="email"
+                        >
+                    </p>
+                </fieldset>
+
+                <!-- Grupo 2: Rol y Accesos del Sistema -->
+                <fieldset class="form-fieldset">
+                    <legend class="form-legend">Perfil y Seguridad</legend>
+
+                    <p class="form-group">
+                        <label for="register-role" class="form-label">Rol en el Sistema</label>
+                        <select id="register-role" name="role" class="form-select" required>
+                            <option value="" disabled selected>Selecciona un rol</option>
+                            <option value="operator">Operador de Campo</option>
+                            <option value="analyst">Analista de Calidad</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </p>
+
+                    <p class="form-group">
+                        <label for="register-password" class="form-label">Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="register-password" 
+                            name="password" 
+                            class="form-input" 
+                            placeholder="Mínimo 8 caracteres" 
+                            required 
+                            autocomplete="new-password"
+                        >
+                    </p>
+
+                    <p class="form-group">
+                        <label for="register-confirm-password" class="form-label">Confirmar Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="register-confirm-password" 
+                            name="confirmPassword" 
+                            class="form-input" 
+                            placeholder="Repite tu contraseña" 
+                            required 
+                            autocomplete="new-password"
+                        >
+                    </p>
+                </fieldset>
+
+                <!-- Términos y Envío -->
+                <p class="auth-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="register-terms" name="terms" class="checkbox-input" required>
+                        <span>Acepto los <a href="#" class="auth-link-secondary">Términos y Condiciones</a></span>
+                    </label>
+                </p>
+
+                <button type="submit" id="register-submit-btn" class="btn btn-primary auth-btn">
+                    Registrar Usuario
+                </button>
+
+            </form>
+
+            <!-- Pie de tarjeta para volver a Login -->
+            <footer class="auth-footer">
+                <p class="auth-footer-text">
+                    ¿Ya tienes una cuenta? 
+                    <a href="login.html" class="auth-link-primary">Inicia Sesión</a>
+                </p>
+            </footer>
+
+        </section>
+    </main>
+
+    <!-- Lógica JS para validación de contraseñas y envío a API -->
+    <script src="../../public/js/register.js"></script>
+</body>
+</html>

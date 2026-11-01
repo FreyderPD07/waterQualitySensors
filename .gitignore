@@ -1,1 +1,15 @@
-around/
+# Python y entornos
+venv/
+.venv/
+__pycache__/
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Variables de entorno
+.env
+
+# Editor y sistema
+.vscode/
+.DS_Store

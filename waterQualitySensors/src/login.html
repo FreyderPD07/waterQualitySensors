@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iniciar sesión | qaterMLdetect</title>
+  <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+  <main class="vista vista-acceso">
+    <aside class="panel-marca">
+      <h1 class="marca-acceso">
+        <svg class="icono" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+        <span>qaterMLdetect</span>
+      </h1>
+      <p class="mensaje-marca">El agua de tu comunidad, bajo control.</p>
+    </aside>
+
+    <section class="panel-formulario" aria-labelledby="titulo-login">
+      <form id="form-login" novalidate>
+        <header class="encabezado-formulario">
+          <h2 id="titulo-login">¡Qué bueno tenerte de vuelta!</h2>
+          <p>Ingresa a tu cuenta para consultar el estado del agua.</p>
+        </header>
+
+        <p>
+          <label for="login-email">Correo electrónico</label>
+          <input id="login-email" type="email" name="email" maxlength="80" autocomplete="username">
+        </p>
+        <p>
+          <label for="login-clave">Contraseña</label>
+          <input id="login-clave" type="password" name="password" autocomplete="current-password">
+        </p>
+        <output class="mensaje-error" id="error-login" aria-live="polite"></output>
+        <button type="submit" class="boton-principal">Iniciar sesión</button>
+      </form>
+
+      <p>¿Aún no tienes cuenta? <a href="registro.html">Regístrate</a></p>
+    </section>
+  </main>
+
+  <script src="app/script.js"></script>
+</body>
+</html>

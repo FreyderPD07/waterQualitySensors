@@ -10,15 +10,15 @@
 
   <!-- Íconos SVG reutilizables (sin imágenes externas) -->
   <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
-    <symbol id="i-dashboard" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/></symbol>
-    <symbol id="i-lecturas" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14"/></symbol>
-    <symbol id="i-alertas" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></symbol>
-    <symbol id="i-tendencias" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></symbol>
-    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
-    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4zM8 10h8M8 13h5"/></symbol>
-    <symbol id="i-cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
-    <symbol id="i-salir" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+    <symbol id="i_logo" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+    <symbol id="i_dashboard" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/></symbol>
+    <symbol id="i_lecturas" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14"/></symbol>
+    <symbol id="i_alertas" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></symbol>
+    <symbol id="i_tendencias" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></symbol>
+    <symbol id="i_menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i_chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4zM8 10h8M8 13h5"/></symbol>
+    <symbol id="i_cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i_salir" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
   </svg>
 
   <main>
@@ -27,152 +27,152 @@
     <div id="aplicacion" class="aplicacion">
 
       <!-- BARRA LATERAL: Navegación SPA por secciones -->
-      <aside class="barra-lateral">
-        <p class="marca"><svg class="icono" aria-hidden="true"><use href="#i-logo"/></svg><span>WaterMLdetect</span></p>
+      <aside class="barra_lateral">
+        <p class="marca"><svg class="icono" aria-hidden="true"><use href="#i_logo"/></svg><span>WaterMLdetect</span></p>
         
         <!-- Menú Principal: data-vista especifica la sección <section class="vista"> a mostrar -->
-        <nav id="menu-principal" aria-label="Menú principal">
-          <button type="button" data-vista="vista-dashboard" class="activa"><svg class="icono" aria-hidden="true"><use href="#i-dashboard"/></svg>Dashboard</button>
-          <button type="button" data-vista="vista-lecturas"><svg class="icono" aria-hidden="true"><use href="#i-lecturas"/></svg>Lecturas</button>
-          <button type="button" data-vista="vista-alertas"><svg class="icono" aria-hidden="true"><use href="#i-alertas"/></svg>Alertas</button>
-          <button type="button" data-vista="vista-tendencias"><svg class="icono" aria-hidden="true"><use href="#i-tendencias"/></svg>Tendencias</button>
+        <nav id="menu_principal" aria-label="Menú principal">
+          <button type="button" data-vista="vista_dashboard" class="activa"><svg class="icono" aria-hidden="true"><use href="#i_dashboard"/></svg>Dashboard</button>
+          <button type="button" data-vista="vista_lecturas"><svg class="icono" aria-hidden="true"><use href="#i_lecturas"/></svg>Lecturas</button>
+          <button type="button" data-vista="vista_alertas"><svg class="icono" aria-hidden="true"><use href="#i_alertas"/></svg>Alertas</button>
+          <button type="button" data-vista="vista_tendencias"><svg class="icono" aria-hidden="true"><use href="#i_tendencias"/></svg>Tendencias</button>
         </nav>
         
         <footer>
           <!-- Nombre Usuario: Inyecta dinámicamente el nombre del usuario con sesión activa -->
-          <p>Sesión de <span id="nombre-usuario">Usuario</span></p>
+          <p>Sesión de <span id="nombre_usuario">Usuario</span></p>
           
           <!-- Botón Cerrar Sesión: Ejecuta la función cerrarSesion() limpiando el token -->
-          <button type="button" id="boton-cerrar-sesion"><svg class="icono" aria-hidden="true"><use href="#i-salir"/></svg>Cerrar sesión</button>
+          <button type="button" id="boton_cerrar_sesion"><svg class="icono" aria-hidden="true"><use href="#i_salir"/></svg>Cerrar sesión</button>
         </footer>
       </aside>
 
       <div class="contenido">
         <!-- BARRA SUPERIOR (TOPBAR): Controles globales y estado de actualización -->
-        <header class="barra-superior">
-          <button type="button" id="boton-menu" class="boton-icono" aria-label="Abrir menú"><svg class="icono" aria-hidden="true"><use href="#i-menu"/></svg></button>
+        <header class="barra_superior">
+          <button type="button" id="boton_menu" class="boton_icono" aria-label="Abrir menú"><svg class="icono" aria-hidden="true"><use href="#i_menu"/></svg></button>
           
           <!-- Selector de Tanque/Nodo: Rellenado dinámicamente desde GET /tanques -->
-          <p><label for="selector-tanque">Tanque</label><select id="selector-tanque"></select></p>
+          <p><label for="selector_tanque">Tanque</label><select id="selector_tanque"></select></p>
           
           <!-- Botón Notificaciones con insignia contadora de alertas sin leer -->
-          <button type="button" id="boton-notificaciones" class="boton-notificaciones" aria-label="Ver notificaciones">
-            <svg class="icono" aria-hidden="true"><use href="#i-alertas"/></svg>
-            <span id="insignia-notificaciones" class="insignia-notificaciones" hidden>0</span>
+          <button type="button" id="boton_notificaciones" class="boton_notificaciones" aria-label="Ver notificaciones">
+            <svg class="icono" aria-hidden="true"><use href="#i_alertas"/></svg>
+            <span id="insignia_notificaciones" class="insignia_notificaciones" hidden>0</span>
           </button>
           
           <!-- Timestamp de la lectura más reciente devuelta por el sensor -->
-          <p>Última lectura: <time id="fecha-ultima-lectura">—</time></p>
+          <p>Última lectura: <time id="fecha_ultima_lectura">—</time></p>
         </header>
 
         <div class="vistas">
 
           <!-- ---------- MÓDULO 1: DASHBOARD PRINCIPAL ---------- -->
-          <section class="vista" id="vista-dashboard">
-            <header class="titulo-vista">
+          <section class="vista" id="vista_dashboard">
+            <header class="titulo_vista">
               <h2>Estado del agua</h2>
               <!-- Clasificación Random Forest: "Buena" | "Aceptable" | "Riesgo" | "No apta" -->
-              <span id="clasificacion-general" class="insignia">Sin datos</span>
+              <span id="clasificacion_general" class="insignia">Sin datos</span>
             </header>
 
             <!-- Tarjetas de Métricas: Inyección dinámica HTML de tarjetas (pH, Turbidez, Conductividad, Temp) -->
-            <section id="tarjetas-metricas" aria-label="Parámetros fisicoquímicos"></section>
+            <section id="tarjetas_metricas" aria-label="Parámetros fisicoquímicos"></section>
 
-            <section class="rejilla-dashboard">
+            <section class="rejilla_dashboard">
               <!-- Panel de Gráfica Temporal (Chart.js) -->
-              <article class="panel panel-grafica">
-                <header class="encabezado-panel">
+              <article class="panel panel_grafica">
+                <header class="encabezado_panel">
                   <h3>Últimas 24 horas</h3>
                   <!-- Selector de Variable a Graficar (pH, turbidez, conductividad, temperatura) -->
-                  <select id="variable-grafica-principal" aria-label="Variable a graficar"></select>
+                  <select id="variable_grafica_principal" aria-label="Variable a graficar"></select>
                 </header>
                 <!-- Canvas del gráfico interactivo renderizado por Chart.js -->
-                <canvas id="grafica-principal"></canvas>
+                <canvas id="grafica_principal"></canvas>
               </article>
 
               <!-- Columna Lateral: Estado del Hardware / LoRaWAN y Módulo IA -->
-              <aside class="columna-lateral">
+              <aside class="columna_lateral">
                 <article class="panel">
-                  <header class="encabezado-panel">
+                  <header class="encabezado_panel">
                     <h3>Red LoRaWAN</h3>
                     <!-- Indicador de señal: data-conectado="si|no" para alterar color CSS -->
-                    <span id="indicador-red" class="indicador-red" data-conectado="no">Sin conexión</span>
+                    <span id="indicador_red" class="indicador_red" data-conectado="no">Sin conexión</span>
                   </header>
                   <dl class="datos">
                     <!-- ID del nodo sensor que transmite la data -->
-                    <dt>Nodo</dt><dd id="red-nodo">—</dd>
+                    <dt>Nodo</dt><dd id="red_nodo">—</dd>
                     <!-- Indicador de potencia de señal RSSI en dBm -->
-                    <dt>Señal (RSSI)</dt><dd id="red-rssi">—</dd>
+                    <dt>Señal (RSSI)</dt><dd id="red_rssi">—</dd>
                     <!-- Relación Señal a Ruido (SNR) en dB -->
-                    <dt>Relación señal/ruido</dt><dd id="red-snr">—</dd>
+                    <dt>Relación señal/ruido</dt><dd id="red_snr">—</dd>
                     <!-- Estado y porcentaje de batería del nodo IoT -->
-                    <dt>Batería</dt><dd><meter id="red-bateria" min="0" max="100" low="25" high="50" optimum="100" value="0"></meter> <span id="red-bateria-texto">—</span></dd>
+                    <dt>Batería</dt><dd><meter id="red_bateria" min="0" max="100" low="25" high="50" optimum="100" value="0"></meter> <span id="red_bateria_texto">—</span></dd>
                   </dl>
                 </article>
 
                 <!-- Panel de Interpretación por Inteligencia Artificial (Llama AI) -->
-                <article class="panel" id="reporte-ia">
+                <article class="panel" id="reporte_ia">
                   <h3>Interpretación de Llama AI</h3>
                   <!-- Explicación en lenguaje claro del estado del agua -->
-                  <p id="ia-explicacion">Cargando explicación…</p>
+                  <p id="ia_explicacion">Cargando explicación…</p>
                   <!-- Lista <ul> de recomendaciones generadas por el modelo Llama -->
-                  <ul id="ia-recomendaciones"></ul>
+                  <ul id="ia_recomendaciones"></ul>
                   <!-- Detalle técnico de los parámetros usados para el reporte -->
-                  <small id="ia-origen"></small>
-                  <button type="button" id="boton-interpretar" class="boton-principal"><svg class="icono" aria-hidden="true"><use href="#i-chat"/></svg>¿Necesitas que te interprete la lectura?</button>
+                  <small id="ia_origen"></small>
+                  <button type="button" id="boton_interpretar" class="boton_principal"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg>¿Necesitas que te interprete la lectura?</button>
                 </article>
               </aside>
             </section>
-            <p class="nota-legal">La clasificación es una evaluación predictiva basada en IA y no reemplaza los análisis de laboratorio oficiales.</p>
+            <p class="nota_legal">La clasificación es una evaluación predictiva basada en IA y no reemplaza los análisis de laboratorio oficiales.</p>
           </section>
 
           <!-- ---------- MÓDULO 2: HISTORIAL DE LECTURAS DE SENSORES ---------- -->
-          <section class="vista" id="vista-lecturas" hidden>
-            <header class="titulo-vista"><h2>Lecturas de sensores</h2></header>
+          <section class="vista" id="vista_lecturas" hidden>
+            <header class="titulo_vista"><h2>Lecturas de sensores</h2></header>
             
             <!-- Estado general de Nodos: Renderiza el porcentaje de batería por estación -->
-            <section id="estado-nodos" aria-label="Estado de los nodos"></section>
+            <section id="estado_nodos" aria-label="Estado de los nodos"></section>
 
             <!-- Formulario de Filtros: Filtra por GET /lecturas?nodo=&desde=&hasta= -->
-            <form id="filtros-lecturas" class="barra-filtros">
+            <form id="filtros_lecturas" class="barra_filtros">
               <!-- Selector de filtro por nodo -->
-              <p><label for="filtro-nodo">Nodo</label><select id="filtro-nodo" name="nodo"></select></p>
+              <p><label for="filtro_nodo">Nodo</label><select id="filtro_nodo" name="nodo"></select></p>
               <!-- Rango de fecha inicial -->
-              <p><label for="filtro-desde">Desde</label><input id="filtro-desde" type="date" name="desde"></p>
+              <p><label for="filtro_desde">Desde</label><input id="filtro_desde" type="date" name="desde"></p>
               <!-- Rango de fecha final -->
-              <p><label for="filtro-hasta">Hasta</label><input id="filtro-hasta" type="date" name="hasta"></p>
+              <p><label for="filtro_hasta">Hasta</label><input id="filtro_hasta" type="date" name="hasta"></p>
               <p class="acciones">
-                <button type="submit" class="boton-principal">Filtrar</button>
+                <button type="submit" class="boton_principal">Filtrar</button>
                 <!-- Botón de Exportación a archivo estructurado CSV -->
-                <button type="button" id="boton-exportar" class="boton-secundario">Exportar CSV</button>
+                <button type="button" id="boton_exportar" class="boton_secundario">Exportar CSV</button>
               </p>
               <!-- Mensaje de error en filtros de fecha incoherentes -->
-              <output id="error-filtros" class="mensaje-error"></output>
+              <output id="error_filtros" class="mensaje_error"></output>
             </form>
 
             <!-- Tabla de datos históricos transmitidos por LoRaWAN -->
-            <div class="contenedor-tabla">
-              <table class="tabla-lecturas">
+            <div class="contenedor_tabla">
+              <table class="tabla_lecturas">
                 <caption>Mediciones registradas, de la más reciente a la más antigua</caption>
                 <thead>
                   <tr><th scope="col">Fecha y hora</th><th scope="col">Nodo</th><th scope="col">pH</th><th scope="col">Turbidez (NTU)</th><th scope="col">Conductividad (µS/cm)</th><th scope="col">Temp. (°C)</th><th scope="col">Clasificación</th></tr>
                 </thead>
                 <!-- Inyección dinámica de las filas <tr> provenientes del array de lecturas -->
-                <tbody id="cuerpo-tabla-lecturas"></tbody>
+                <tbody id="cuerpo_tabla_lecturas"></tbody>
               </table>
             </div>
           </section>
 
           <!-- ---------- MÓDULO 3: CENTRO DE GESTIÓN DE ALERTAS ---------- -->
-          <section class="vista" id="vista-alertas" hidden>
-            <header class="titulo-vista">
+          <section class="vista" id="vista_alertas" hidden>
+            <header class="titulo_vista">
               <h2>Centro de alertas</h2>
               <!-- Contador total de alertas críticas o advertencias sin resolver -->
-              <p>Pendientes: <strong id="contador-alertas">0</strong></p>
+              <p>Pendientes: <strong id="contador_alertas">0</strong></p>
             </header>
             
             <!-- Botones de Filtrado de Alertas por Severidad (data-severidad) -->
-            <div id="filtros-alertas" class="barra-filtros" role="group" aria-label="Filtrar por severidad">
+            <div id="filtros_alertas" class="barra_filtros" role="group" aria-label="Filtrar por severidad">
               <button type="button" class="activa" data-severidad="todas">Todas</button>
               <button type="button" data-severidad="critica">Críticas</button>
               <button type="button" data-severidad="advertencia">Advertencias</button>
@@ -180,36 +180,36 @@
             </div>
             
             <!-- Contenedor dinámico de artículos <article class="alerta"> -->
-            <section id="lista-alertas"></section>
+            <section id="lista_alertas"></section>
           </section>
 
           <!-- ---------- MÓDULO 4: TENDENCIAS Y REPORTES HISTÓRICOS ---------- -->
-          <section class="vista" id="vista-tendencias" hidden>
-            <header class="titulo-vista"><h2>Tendencias y reportes</h2></header>
+          <section class="vista" id="vista_tendencias" hidden>
+            <header class="titulo_vista"><h2>Tendencias y reportes</h2></header>
             
-            <form id="filtros-tendencias" class="barra-filtros">
+            <form id="filtros_tendencias" class="barra_filtros">
               <!-- Selector de ventana temporal (1, 7 o 30 días) -->
-              <p><label for="filtro-rango">Rango</label>
-                <select id="filtro-rango" name="rango">
+              <p><label for="filtro_rango">Rango</label>
+                <select id="filtro_rango" name="rango">
                   <option value="1">Últimas 24 horas</option>
                   <option value="7" selected>Últimos 7 días</option>
                   <option value="30">Últimos 30 días</option>
                 </select></p>
               <!-- Selector de la variable fisicoquímica a analizar -->
-              <p><label for="variable-tendencia">Variable</label><select id="variable-tendencia" name="variable"></select></p>
-              <p class="acciones"><button type="submit" class="boton-principal">Consultar</button></p>
+              <p><label for="variable_tendencia">Variable</label><select id="variable_tendencia" name="variable"></select></p>
+              <p class="acciones"><button type="submit" class="boton_principal">Consultar</button></p>
             </form>
             
-            <section class="rejilla-dashboard">
+            <section class="rejilla_dashboard">
               <!-- Canvas para gráfica de tendencias de largo plazo -->
-              <article class="panel panel-grafica"><canvas id="grafica-tendencia"></canvas></article>
+              <article class="panel panel_grafica"><canvas id="grafica_tendencia"></canvas></article>
               
               <!-- Panel de Métricas Estadísticas (Mínimo, Promedio, Máximo, Muestras, Fuera de Norma) -->
               <article class="panel">
                 <h3>Resumen del periodo</h3>
                 <!-- Inyección dinámica del listado de datos estadísticas <dt>/<dd> -->
-                <dl class="datos" id="resumen-tendencia"></dl>
-                <p id="mensaje-sin-datos" class="mensaje-error" hidden>No hay datos para el periodo seleccionado.</p>
+                <dl class="datos" id="resumen_tendencia"></dl>
+                <p id="mensaje_sin_datos" class="mensaje_error" hidden>No hay datos para el periodo seleccionado.</p>
               </article>
             </section>
           </section>
@@ -219,33 +219,33 @@
 
       <!-- ---------- ASISTENTE FLOTANTE DE CONVERSACIÓN (LLAMA AI) ---------- -->
       <!-- Botón flotante para desplegar la ventana del Chat de Asistencia -->
-      <button type="button" id="boton-chat" class="boton-flotante"><svg class="icono" aria-hidden="true"><use href="#i-chat"/></svg>Preguntar a Llama AI</button>
+      <button type="button" id="boton_chat" class="boton_flotante"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg>Preguntar a Llama AI</button>
       
       <!-- Ventana desplegable del chat con el modelo de lenguaje -->
-      <aside id="chat-ia" class="chat" aria-label="Asistente Llama AI" hidden>
+      <aside id="chat_ia" class="chat" aria-label="Asistente Llama AI" hidden>
         <header>
           <h2>Asistente Llama AI</h2>
-          <button type="button" id="boton-cerrar-chat" class="boton-icono" aria-label="Cerrar chat"><svg class="icono" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+          <button type="button" id="boton_cerrar_chat" class="boton_icono" aria-label="Cerrar chat"><svg class="icono" aria-hidden="true"><use href="#i_cerrar"/></svg></button>
         </header>
         
         <!-- Historial de mensajes inyectados por JS (del usuario y de la IA) -->
-        <ol id="chat-mensajes" aria-live="polite"></ol>
+        <ol id="chat_mensajes" aria-live="polite"></ol>
         
         <!-- Indicador de escritura del modelo de IA -->
-        <p id="chat-estado" hidden>Llama AI está escribiendo…</p>
+        <p id="chat_estado" hidden>Llama AI está escribiendo…</p>
         
         <!-- Botones de preguntas predeterminadas (data-pregunta) -->
-        <div id="chat-sugerencias">
+        <div id="chat_sugerencias">
           <button type="button" data-pregunta="¿Es seguro consumir el agua hoy?">¿Es seguro beberla hoy?</button>
           <button type="button" data-pregunta="¿Qué significa el valor de turbidez?">¿Qué es la turbidez?</button>
           <button type="button" data-pregunta="¿El agua es apta para riego?">¿Sirve para riego?</button>
         </div>
         
         <!-- Formulario de envío de consultas al servicio GET/POST /ia/reporte -->
-        <form id="form-chat" novalidate>
-          <p><label for="chat-entrada" class="solo-lectores">Tu pregunta</label>
-          <input id="chat-entrada" name="pregunta" maxlength="300" autocomplete="off" placeholder="Escribe tu pregunta sobre el agua">
-          <button type="submit" class="boton-principal">Enviar</button></p>
+        <form id="form_chat" novalidate>
+          <p><label for="chat_entrada" class="solo_lectores">Tu pregunta</label>
+          <input id="chat_entrada" name="pregunta" maxlength="300" autocomplete="off" placeholder="Escribe tu pregunta sobre el agua">
+          <button type="submit" class="boton_principal">Enviar</button></p>
         </form>
       </aside>
     </div>

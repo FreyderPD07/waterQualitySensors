@@ -1,5 +1,7 @@
 const SERVER_URL = "http://192.168.18.183:1235/v1";
 const INTEGRATION_NAME = "chat_ia msi"; // Nombre descriptivo de esta integración.
+//  ##**api_key="lm-studio"**##nombre que tenia en python
+
 const MODEL_ID = "qwen/qwen3.5-9b"; // Debe coincidir con un ID publicado por GET /v1/models.
 
 async function main() {

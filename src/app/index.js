@@ -228,54 +228,6 @@ function cerrarSesion() {
 
 // Comprueba el formato del correo y los requisitos de longitud y complejidad de la contraseña.
 const correoValido = (correo) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo);
-const claveSegura = (clave) => clave.length >= 8 && clave.length <= 12 && /[A-Z]/.test(clave) && /\d/.test(clave) && /[^A-Za-z0-9]/.test(clave);
-
-// Valida localmente el formulario de registro antes de enviarlo al backend.
-function validarRegistro(datos) {
-  if (Object.values(datos).some((valor) => !valor.trim())) return "Todos los campos son obligatorios.";
-  if (!/^[a-zA-Z0-9]{1,50}$/.test(datos.usuario)) return "El usuario solo admite letras y números.";
-  if (!correoValido(datos.email)) return "Formato de correo no válido.";
-  if (!/^\d{10,15}$/.test(datos.telefono)) return "El teléfono debe tener entre 10 y 15 dígitos.";
-  if (!claveSegura(datos.password)) return "La contraseña debe tener de 8 a 12 caracteres, con mayúscula, número y símbolo.";
-  if (datos.password !== datos.confirmacion) return "Las contraseñas no coinciden.";
-  return "";
-}
-
-// Envía las credenciales al endpoint de login y guarda los datos de sesión recibidos.
-async function iniciarSesion(evento) {
-  evento.preventDefault();
-  const { email, password } = Object.fromEntries(new FormData(evento.target));
-  if (!email.trim() || !password) return ($("error_login").value = "Este campo es obligatorio.");
-  if (!correoValido(email)) return ($("error_login").value = "Formato de correo no válido.");
-  try {
-    sesion = CONFIG.usarDatosDemo
-      ? { nombre: email.split("@")[0], rol: "comunero", token: "demo" }
-      : await llamarApi(CONFIG.endpoints.login, { method: "POST", body: JSON.stringify({ email, password }) }).then((respuestaLogin) => ({ ...respuestaLogin.usuario, token: respuestaLogin.token }));
-    $("error_login").value = "";
-  } catch {
-    $("error_login").value = "El correo electrónico o la contraseña son incorrectos.";
-    return;
-  }
-  entrarALaAplicacion();
-}
-
-// Valida los datos del formulario y crea la cuenta mediante el endpoint de registro.
-async function registrarUsuario(evento) {
-  evento.preventDefault();
-  const datos = Object.fromEntries(new FormData(evento.target));
-  const error = validarRegistro(datos);
-  $("error_registro").value = error;
-  if (error) return;
-  try {
-    if (!CONFIG.usarDatosDemo) await llamarApi(CONFIG.endpoints.registro, { method: "POST", body: JSON.stringify(datos) });
-    sesion = { nombre: datos.nombre, rol: "comunero", token: "demo" };
-  } catch {
-    $("error_registro").value = "No se pudo crear la cuenta. Revisa si el correo ya está registrado.";
-    return;
-  }
-  entrarALaAplicacion();
-}
-
 /* ============================ DASHBOARD ============================ */
 
 // Lee el ID del tanque elegido en el selector de la barra superior.
@@ -476,68 +428,6 @@ function actualizarContadorAlertas() {
   );
 }
 
-/* ============================ CHAT CON LLAMA AI ============================ */
-
-const TIEMPO_MAXIMO_CHAT_MS = 15000;
-
-// Abre el chat y, opcionalmente, envía una pregunta inicial desde el botón de interpretación.
-function abrirChat(preguntaInicial) {
-  $("chat_ia").hidden = false;
-  $("boton_chat").hidden = true;
-  if (!$("chat_mensajes").children.length) agregarMensaje("ia", "Hola, soy el asistente de calidad del agua. Puedo explicarte la última lectura del tanque y darte recomendaciones de uso.");
-  if (preguntaInicial) enviarPregunta(preguntaInicial);
-  else $("chat_entrada").focus();
-}
-
-function cerrarChat() {
-  $("chat_ia").hidden = true;
-  $("boton_chat").hidden = false;
-}
-
-// Añade al historial un mensaje de usuario o del asistente y desplaza el chat al final.
-function agregarMensaje(autor, texto) {
-  const mensaje = document.createElement("li");
-  mensaje.dataset.autor = autor;
-  mensaje.textContent = texto;
-  $("chat_mensajes").append(mensaje);
-  $("chat_mensajes").scrollTop = $("chat_mensajes").scrollHeight;
-}
-
-// Solo letras, números y signos básicos de puntuación
-const preguntaValida = (pregunta) => /^[\p{L}\p{N}\s¿?¡!.,:;()%/-]+$/u.test(pregunta);
-
-// Respuesta simulada. En producción el backend arma el prompt con la lectura actual y llama a Llama AI.
-function responderDemo(pregunta) {
-  const ultima = ultimaLectura(nodoActual());
-  const preguntaNormalizada = pregunta.toLowerCase();
-  const resumen = `Última lectura: pH ${ultima.ph.toFixed(1)}, turbidez ${ultima.turbidez.toFixed(1)} NTU, conductividad ${ultima.conductividad.toFixed(0)} µS/cm. Clasificación: ${ultima.clasificacion}.`;
-  const consejo = (REPORTES_DEMO[ultima.clasificacion] ?? ["", []])[1].join(". ");
-  if (/beb|consum|tomar|cocin|segur|apta|interpret|lectura|diagn|recomend/.test(preguntaNormalizada)) return `${resumen}\n${REPORTES_DEMO[ultima.clasificacion][0]}\n${consejo}.`;
-  if (/turbidez/.test(preguntaNormalizada)) return `La turbidez mide qué tan turbia está el agua por sedimentos. El límite de referencia es ${UMBRALES.turbidez.max} NTU y ahora está en ${ultima.turbidez.toFixed(1)} NTU. Después de lluvias suele subir.`;
-  if (/conductividad/.test(preguntaNormalizada)) return `La conductividad indica la cantidad de sales disueltas. Ahora está en ${ultima.conductividad.toFixed(0)} µS/cm y el límite es ${UMBRALES.conductividad.max}.`;
-  if (/ph|riego|agua|tanque|sensor|bater/.test(preguntaNormalizada)) return `${resumen}\nPara riego, estos valores son aceptables mientras la clasificación no sea "No apta".`;
-  return "Soy un asistente especializado en el monitoreo del agua de tu comunidad. Hazme preguntas sobre la calidad del agua o las recomendaciones de uso.";
-}
-
-async function enviarPregunta(pregunta) {
-  pregunta = pregunta.trim();
-  if (!pregunta) return;
-  if (!preguntaValida(pregunta)) return agregarMensaje("ia", "Escribe tu pregunta usando solo letras, números y signos de puntuación.");
-  agregarMensaje("usuario", pregunta);
-  $("chat_entrada").value = "";
-  $("chat_estado").hidden = false;
-  try {
-    const consulta = CONFIG.usarDatosDemo
-      ? new Promise((resolverConsulta) => setTimeout(() => resolverConsulta({ respuesta: responderDemo(pregunta) }), 700))
-      : llamarApi(CONFIG.endpoints.chat, { method: "POST", body: JSON.stringify({ nodoId: nodoActual(), pregunta }) });
-    const limite = new Promise((_, rechazarConsulta) => setTimeout(() => rechazarConsulta(new Error("tiempo agotado")), TIEMPO_MAXIMO_CHAT_MS));
-    agregarMensaje("ia", (await Promise.race([consulta, limite])).respuesta);
-  } catch {
-    agregarMensaje("ia", "No fue posible conectar con el asistente de IA en este momento. Consulta las métricas y el estado en el Dashboard principal.");
-  }
-  $("chat_estado").hidden = true;
-}
-
 /* ============================ INICIO ============================ */
 
 // Rellena los selectores de tanque y medición con las opciones disponibles.
@@ -563,34 +453,12 @@ async function iniciarAplicacion() {
   mostrarVista("vista_dashboard");
 }
 
-// Asocia los controles del HTML con sus funciones para navegación, formularios, filtros y chat.
+// Asocia los controles del dashboard con sus funciones de navegación y filtros.
 function conectarEventos() {
-  const formularioLogin = $("form_login");
-  if (formularioLogin) {
-    if (sesion) {
-      window.location.replace("dashboard.html");
-      return;
-    }
-    formularioLogin.addEventListener("submit", iniciarSesion);
+  if (!$("aplicacion")) {
+    if (sesion) window.location.replace("dashboard.html");
     return;
   }
-
-  const formularioRegistro = $("form_registro");
-  if (formularioRegistro) {
-    if (sesion) {
-      window.location.replace("dashboard.html");
-      return;
-    }
-    formularioRegistro.addEventListener("submit", registrarUsuario);
-    return;
-  }
-
-  if (!sesion && !$("aplicacion")) return;
-  if (sesion && !$("aplicacion")) {
-    window.location.replace("dashboard.html");
-    return;
-  }
-  if (!$("aplicacion")) return;
   if (!sesion) {
     window.location.replace("login.html");
     return;
@@ -605,14 +473,13 @@ function conectarEventos() {
   $("boton_exportar").addEventListener("click", exportarCSV);
   $("filtros_alertas").addEventListener("click", (evento) => evento.target.dataset.severidad && filtrarAlertas(evento.target.dataset.severidad));
   $("lista_alertas").addEventListener("click", accionAlerta);
-  $("boton_chat").addEventListener("click", () => abrirChat());
-  $("boton_interpretar").addEventListener("click", () => abrirChat("Interpreta la última lectura del tanque y dame recomendaciones."));
-  $("boton_cerrar_chat").addEventListener("click", cerrarChat);
-  $("form_chat").addEventListener("submit", (evento) => { evento.preventDefault(); enviarPregunta($("chat_entrada").value); });
-  $("chat_sugerencias").addEventListener("click", (evento) => evento.target.dataset.pregunta && enviarPregunta(evento.target.dataset.pregunta));
   $("boton_menu").addEventListener("click", () => document.querySelector(".barra_lateral").classList.toggle("abierta"));
   $("filtros_tendencias").addEventListener("submit", (evento) => { evento.preventDefault(); actualizarTendencias(); });
   iniciarAplicacion();
 }
 
-conectarEventos();
+if ($("aplicacion")) {
+  conectarEventos();
+} else if (sesion) {
+  window.location.replace("dashboard.html");
+}

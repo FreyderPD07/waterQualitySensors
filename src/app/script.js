@@ -44,14 +44,11 @@ const VARIABLES = Object.keys(UMBRALES);
 const CLASES = { "Buena": "buena", "Aceptable": "aceptable", "Riesgo": "riesgo", "No apta": "no-apta" };
 
 // La sesión temporal permite navegar entre páginas sin dejar la cuenta abierta al cerrar la pestaña.
-const CLAVE_SESION = "qaterMLdetect-sesion";
+const CLAVE_SESION = "WaterMLdetect-sesion";
 let sesion = recuperarSesion();
 let tanques = [];
 let lecturas = [];
 let alertas = [];
-// Instancias Chart.js activas, indexadas por el ID del canvas para poder destruirlas al actualizar la gráfica.
-let graficas = {};
-
 // Atajo para obtener elementos del HTML por su ID.
 const $ = (id) => document.getElementById(id);
 // Convierte una fecha ISO del backend al formato local usado en la interfaz.
@@ -218,7 +215,7 @@ function mostrarVista(idVista) {
 
 function entrarALaAplicacion() {
   sessionStorage.setItem(CLAVE_SESION, JSON.stringify(sesion));
-  window.location.assign("index.html");
+  window.location.assign("dashboard.html");
 }
 
 function cerrarSesion() {
@@ -351,29 +348,11 @@ async function renderReporteIA(ultima) {
   }
 }
 
-/* ============================ GRÁFICAS ============================ */
-
-// Dibuja (o redibuja) una gráfica de línea con las líneas de umbral en punteado
-function dibujarGrafica(idCanvas, datos, variable) {
-  if (typeof Chart === "undefined") return;
-  const configuracionVariable = UMBRALES[variable];
-  const etiquetas = datos.map((lectura) => new Date(lectura.fecha).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
-  const linea = (valor, color) => ({ data: datos.map(() => valor), borderColor: color, borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5 });
-  const conjuntos = [{ label: `${configuracionVariable.nombre} ${configuracionVariable.unidad}`, data: datos.map((lectura) => lectura[variable]), borderColor: "#2a9de0", backgroundColor: "rgba(79,176,234,.18)", fill: true, tension: .3, pointRadius: datos.length > 60 ? 0 : 3 }];
-  if (configuracionVariable.max !== undefined) conjuntos.push(linea(configuracionVariable.max, "#d32f2f"));
-  if (configuracionVariable.min !== undefined) conjuntos.push(linea(configuracionVariable.min, "#ed6c02"));
-  graficas[idCanvas]?.destroy();
-  graficas[idCanvas] = new Chart($(idCanvas), {
-    type: "line",
-    data: { labels: etiquetas, datasets: conjuntos },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } }
-  });
-}
-
 function dibujarGraficaPrincipal() {
   const desde = Date.now() - 24 * 3600000;
   const datos = lecturasDelNodo(nodoActual()).filter((lectura) => new Date(lectura.fecha) >= desde);
-  dibujarGrafica("grafica-principal", datos, $("variable-grafica-principal").value);
+  const variable = $("variable-grafica-principal").value;
+  DashboardCharts.dibujar($("grafica-principal"), datos, variable, UMBRALES[variable]);
 }
 
 // Filtra las lecturas por periodo y variable, dibuja la gráfica y calcula el resumen estadístico.
@@ -383,7 +362,7 @@ function actualizarTendencias() {
   const datos = lecturasDelNodo(nodoActual()).filter((lectura) => new Date(lectura.fecha) >= desde);
   $("mensaje-sin-datos").hidden = datos.length > 0;
   if (!datos.length) { $("resumen-tendencia").innerHTML = ""; return; }
-  dibujarGrafica("grafica-tendencia", datos, variable);
+  DashboardCharts.dibujar($("grafica-tendencia"), datos, variable, UMBRALES[variable]);
   const valores = datos.map((lectura) => lectura[variable]);
   const configuracionVariable = UMBRALES[variable];
   const promedio = valores.reduce((total, valor) => total + valor, 0) / valores.length;
@@ -589,7 +568,7 @@ function conectarEventos() {
   const formularioLogin = $("form-login");
   if (formularioLogin) {
     if (sesion) {
-      window.location.replace("index.html");
+      window.location.replace("dashboard.html");
       return;
     }
     formularioLogin.addEventListener("submit", iniciarSesion);
@@ -599,13 +578,18 @@ function conectarEventos() {
   const formularioRegistro = $("form-registro");
   if (formularioRegistro) {
     if (sesion) {
-      window.location.replace("index.html");
+      window.location.replace("dashboard.html");
       return;
     }
     formularioRegistro.addEventListener("submit", registrarUsuario);
     return;
   }
 
+  if (!sesion && !$("aplicacion")) return;
+  if (sesion && !$("aplicacion")) {
+    window.location.replace("dashboard.html");
+    return;
+  }
   if (!$("aplicacion")) return;
   if (!sesion) {
     window.location.replace("login.html");

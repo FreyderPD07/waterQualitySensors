@@ -41,17 +41,14 @@ const UMBRALES = {
 // Nombres internos de las mediciones; se derivan de UMBRALES para mantener sincronizados los selectores.
 const VARIABLES = Object.keys(UMBRALES);
 // Relaciona la clasificación recibida del backend con la clase CSS usada para colorear su insignia.
-const CLASES = { "Buena": "buena", "Aceptable": "aceptable", "Riesgo": "riesgo", "No apta": "no-apta" };
+const CLASES = { "Buena": "buena", "Aceptable": "aceptable", "Riesgo": "riesgo", "No apta": "no_apta" };
 
 // La sesión temporal permite navegar entre páginas sin dejar la cuenta abierta al cerrar la pestaña.
-const CLAVE_SESION = "qaterMLdetect-sesion";
+const CLAVE_SESION = "WaterMLdetect-sesion";
 let sesion = recuperarSesion();
 let tanques = [];
 let lecturas = [];
 let alertas = [];
-// Instancias Chart.js activas, indexadas por el ID del canvas para poder destruirlas al actualizar la gráfica.
-let graficas = {};
-
 // Atajo para obtener elementos del HTML por su ID.
 const $ = (id) => document.getElementById(id);
 // Convierte una fecha ISO del backend al formato local usado en la interfaz.
@@ -209,16 +206,16 @@ function descripcionRango(configuracionVariable) {
 
 // Muestra una sola vista y oculta las demás
 function mostrarVista(idVista) {
-  document.querySelector(".barra-lateral").classList.remove("abierta");
+  document.querySelector(".barra_lateral").classList.remove("abierta");
   document.querySelectorAll("#aplicacion .vista").forEach((vista) => (vista.hidden = vista.id !== idVista));
-  document.querySelectorAll("#menu-principal button").forEach((boton) => boton.classList.toggle("activa", boton.dataset.vista === idVista));
-  if (idVista === "vista-tendencias") actualizarTendencias();
-  if (idVista === "vista-dashboard") dibujarGraficaPrincipal();
+  document.querySelectorAll("#menu_principal button").forEach((boton) => boton.classList.toggle("activa", boton.dataset.vista === idVista));
+  if (idVista === "vista_tendencias") actualizarTendencias();
+  if (idVista === "vista_dashboard") dibujarGraficaPrincipal();
 }
 
 function entrarALaAplicacion() {
   sessionStorage.setItem(CLAVE_SESION, JSON.stringify(sesion));
-  window.location.assign("index.html");
+  window.location.assign("dashboard.html");
 }
 
 function cerrarSesion() {
@@ -231,65 +228,17 @@ function cerrarSesion() {
 
 // Comprueba el formato del correo y los requisitos de longitud y complejidad de la contraseña.
 const correoValido = (correo) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo);
-const claveSegura = (clave) => clave.length >= 8 && clave.length <= 12 && /[A-Z]/.test(clave) && /\d/.test(clave) && /[^A-Za-z0-9]/.test(clave);
-
-// Valida localmente el formulario de registro antes de enviarlo al backend.
-function validarRegistro(datos) {
-  if (Object.values(datos).some((valor) => !valor.trim())) return "Todos los campos son obligatorios.";
-  if (!/^[a-zA-Z0-9]{1,50}$/.test(datos.usuario)) return "El usuario solo admite letras y números.";
-  if (!correoValido(datos.email)) return "Formato de correo no válido.";
-  if (!/^\d{10,15}$/.test(datos.telefono)) return "El teléfono debe tener entre 10 y 15 dígitos.";
-  if (!claveSegura(datos.password)) return "La contraseña debe tener de 8 a 12 caracteres, con mayúscula, número y símbolo.";
-  if (datos.password !== datos.confirmacion) return "Las contraseñas no coinciden.";
-  return "";
-}
-
-// Envía las credenciales al endpoint de login y guarda los datos de sesión recibidos.
-async function iniciarSesion(evento) {
-  evento.preventDefault();
-  const { email, password } = Object.fromEntries(new FormData(evento.target));
-  if (!email.trim() || !password) return ($("error-login").value = "Este campo es obligatorio.");
-  if (!correoValido(email)) return ($("error-login").value = "Formato de correo no válido.");
-  try {
-    sesion = CONFIG.usarDatosDemo
-      ? { nombre: email.split("@")[0], rol: "comunero", token: "demo" }
-      : await llamarApi(CONFIG.endpoints.login, { method: "POST", body: JSON.stringify({ email, password }) }).then((respuestaLogin) => ({ ...respuestaLogin.usuario, token: respuestaLogin.token }));
-    $("error-login").value = "";
-  } catch {
-    $("error-login").value = "El correo electrónico o la contraseña son incorrectos.";
-    return;
-  }
-  entrarALaAplicacion();
-}
-
-// Valida los datos del formulario y crea la cuenta mediante el endpoint de registro.
-async function registrarUsuario(evento) {
-  evento.preventDefault();
-  const datos = Object.fromEntries(new FormData(evento.target));
-  const error = validarRegistro(datos);
-  $("error-registro").value = error;
-  if (error) return;
-  try {
-    if (!CONFIG.usarDatosDemo) await llamarApi(CONFIG.endpoints.registro, { method: "POST", body: JSON.stringify(datos) });
-    sesion = { nombre: datos.nombre, rol: "comunero", token: "demo" };
-  } catch {
-    $("error-registro").value = "No se pudo crear la cuenta. Revisa si el correo ya está registrado.";
-    return;
-  }
-  entrarALaAplicacion();
-}
-
 /* ============================ DASHBOARD ============================ */
 
 // Lee el ID del tanque elegido en el selector de la barra superior.
-const nodoActual = () => $("selector-tanque").value;
+const nodoActual = () => $("selector_tanque").value;
 
 // Actualiza los componentes del dashboard usando la última lectura del tanque seleccionado.
 function actualizarDashboard() {
   const ultima = ultimaLectura(nodoActual());
   if (!ultima) return;
-  $("fecha-ultima-lectura").textContent = formatearFecha(ultima.fecha);
-  $("fecha-ultima-lectura").dateTime = ultima.fecha;
+  $("fecha_ultima_lectura").textContent = formatearFecha(ultima.fecha);
+  $("fecha_ultima_lectura").dateTime = ultima.fecha;
   renderTarjetasMetricas(ultima);
   renderClasificacion(ultima);
   renderEstadoRed(ultima);
@@ -299,17 +248,17 @@ function actualizarDashboard() {
 
 // Construye las tarjetas de medición con su valor, unidad y estado respecto a los umbrales.
 function renderTarjetasMetricas(ultima) {
-  $("tarjetas-metricas").innerHTML = VARIABLES.map((variable) => {
+  $("tarjetas_metricas").innerHTML = VARIABLES.map((variable) => {
     const configuracionVariable = UMBRALES[variable];
     const valor = ultima[variable];
     const estado = estadoParametro(variable, valor);
     const apoyo = variable === "temperatura" ? " (apoyo)" : "";
     const etiquetaEstado = { ok: "Normal", alerta: "Cerca del límite", fuera: "Fuera de rango" }[estado];
-    return `<article class="tarjeta-metrica" data-estado="${estado}">
+    return `<article class="tarjeta_metrica" data-estado="${estado}">
       <h3>${configuracionVariable.nombre}${apoyo}</h3>
       <output>${valor.toFixed(configuracionVariable.decimales)} <small>${configuracionVariable.unidad}</small></output>
       <meter min="${configuracionVariable.escala[0]}" max="${configuracionVariable.escala[1]}" low="${configuracionVariable.min ?? configuracionVariable.escala[0]}" high="${configuracionVariable.max}" optimum="${configuracionVariable.min !== undefined ? (configuracionVariable.min + configuracionVariable.max) / 2 : configuracionVariable.escala[0]}" value="${valor}"></meter>
-      <p class="estado-parametro">${etiquetaEstado}</p>
+      <p class="estado_parametro">${etiquetaEstado}</p>
       <small>${descripcionRango(configuracionVariable)}</small>
     </article>`;
   }).join("");
@@ -317,7 +266,7 @@ function renderTarjetasMetricas(ultima) {
 
 // Muestra la clasificación de calidad y asigna la clase CSS correspondiente.
 function renderClasificacion(ultima) {
-  const insignia = $("clasificacion-general");
+  const insignia = $("clasificacion_general");
   insignia.textContent = `Calidad: ${ultima.clasificacion}`;
   insignia.dataset.clase = CLASES[ultima.clasificacion];
 }
@@ -326,69 +275,51 @@ function renderClasificacion(ultima) {
 function renderEstadoRed(ultima) {
   const minutos = (Date.now() - new Date(ultima.fecha)) / 60000;
   const conectado = minutos <= CONFIG.minutosSinSenalParaDesconexion;
-  const indicador = $("indicador-red");
+  const indicador = $("indicador_red");
   indicador.dataset.conectado = conectado ? "si" : "no";
   indicador.textContent = conectado ? "En línea" : "Sin señal reciente";
-  $("red-nodo").textContent = ultima.nodoId;
-  $("red-rssi").textContent = `${ultima.rssi} dBm`;
-  $("red-snr").textContent = `${ultima.snr} dB`;
-  $("red-bateria").value = ultima.bateria;
-  $("red-bateria-texto").textContent = `${Math.round(ultima.bateria)} %`;
+  $("red_nodo").textContent = ultima.nodoId;
+  $("red_rssi").textContent = `${ultima.rssi} dBm`;
+  $("red_snr").textContent = `${ultima.snr} dB`;
+  $("red_bateria").value = ultima.bateria;
+  $("red_bateria_texto").textContent = `${Math.round(ultima.bateria)} %`;
 }
 
 // Renderiza la explicación y recomendaciones recibidas del servicio de IA.
 async function renderReporteIA(ultima) {
   try {
     const reporte = await cargarReporteIA(ultima.nodoId, ultima);
-    $("ia-explicacion").textContent = reporte.explicacion;
-    $("ia-recomendaciones").innerHTML = reporte.recomendaciones.map((recomendacion) => `<li>${recomendacion}</li>`).join("");
-    $("ia-origen").textContent = `Basado en pH ${ultima.ph.toFixed(1)} y turbidez ${ultima.turbidez.toFixed(1)} NTU.`;
+    $("ia_explicacion").textContent = reporte.explicacion;
+    $("ia_recomendaciones").innerHTML = reporte.recomendaciones.map((recomendacion) => `<li>${recomendacion}</li>`).join("");
+    $("ia_origen").textContent = `Basado en pH ${ultima.ph.toFixed(1)} y turbidez ${ultima.turbidez.toFixed(1)} NTU.`;
   } catch {
     // Mensaje de contingencia si Llama AI no responde
-    $("ia-explicacion").textContent = "Explicación temporalmente no disponible. Guíate por la categoría de calidad y los valores del Dashboard.";
-    $("ia-recomendaciones").innerHTML = "";
-    $("ia-origen").textContent = "";
+    $("ia_explicacion").textContent = "Explicación temporalmente no disponible. Guíate por la categoría de calidad y los valores del Dashboard.";
+    $("ia_recomendaciones").innerHTML = "";
+    $("ia_origen").textContent = "";
   }
-}
-
-/* ============================ GRÁFICAS ============================ */
-
-// Dibuja (o redibuja) una gráfica de línea con las líneas de umbral en punteado
-function dibujarGrafica(idCanvas, datos, variable) {
-  if (typeof Chart === "undefined") return;
-  const configuracionVariable = UMBRALES[variable];
-  const etiquetas = datos.map((lectura) => new Date(lectura.fecha).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
-  const linea = (valor, color) => ({ data: datos.map(() => valor), borderColor: color, borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5 });
-  const conjuntos = [{ label: `${configuracionVariable.nombre} ${configuracionVariable.unidad}`, data: datos.map((lectura) => lectura[variable]), borderColor: "#2a9de0", backgroundColor: "rgba(79,176,234,.18)", fill: true, tension: .3, pointRadius: datos.length > 60 ? 0 : 3 }];
-  if (configuracionVariable.max !== undefined) conjuntos.push(linea(configuracionVariable.max, "#d32f2f"));
-  if (configuracionVariable.min !== undefined) conjuntos.push(linea(configuracionVariable.min, "#ed6c02"));
-  graficas[idCanvas]?.destroy();
-  graficas[idCanvas] = new Chart($(idCanvas), {
-    type: "line",
-    data: { labels: etiquetas, datasets: conjuntos },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } }
-  });
 }
 
 function dibujarGraficaPrincipal() {
   const desde = Date.now() - 24 * 3600000;
   const datos = lecturasDelNodo(nodoActual()).filter((lectura) => new Date(lectura.fecha) >= desde);
-  dibujarGrafica("grafica-principal", datos, $("variable-grafica-principal").value);
+  const variable = $("variable_grafica_principal").value;
+  DashboardCharts.dibujar($("grafica_principal"), datos, variable, UMBRALES[variable]);
 }
 
 // Filtra las lecturas por periodo y variable, dibuja la gráfica y calcula el resumen estadístico.
 function actualizarTendencias() {
-  const { rango, variable } = Object.fromEntries(new FormData($("filtros-tendencias")));
+  const { rango, variable } = Object.fromEntries(new FormData($("filtros_tendencias")));
   const desde = Date.now() - Number(rango) * 24 * 3600000;
   const datos = lecturasDelNodo(nodoActual()).filter((lectura) => new Date(lectura.fecha) >= desde);
-  $("mensaje-sin-datos").hidden = datos.length > 0;
-  if (!datos.length) { $("resumen-tendencia").innerHTML = ""; return; }
-  dibujarGrafica("grafica-tendencia", datos, variable);
+  $("mensaje_sin_datos").hidden = datos.length > 0;
+  if (!datos.length) { $("resumen_tendencia").innerHTML = ""; return; }
+  DashboardCharts.dibujar($("grafica_tendencia"), datos, variable, UMBRALES[variable]);
   const valores = datos.map((lectura) => lectura[variable]);
   const configuracionVariable = UMBRALES[variable];
   const promedio = valores.reduce((total, valor) => total + valor, 0) / valores.length;
   const fueraDeRango = valores.filter((valor) => estadoParametro(variable, valor) === "fuera").length;
-  $("resumen-tendencia").innerHTML = `
+  $("resumen_tendencia").innerHTML = `
     <dt>Mínimo</dt><dd>${Math.min(...valores).toFixed(configuracionVariable.decimales)} ${configuracionVariable.unidad}</dd>
     <dt>Promedio</dt><dd>${promedio.toFixed(configuracionVariable.decimales)} ${configuracionVariable.unidad}</dd>
     <dt>Máximo</dt><dd>${Math.max(...valores).toFixed(configuracionVariable.decimales)} ${configuracionVariable.unidad}</dd>
@@ -400,7 +331,7 @@ function actualizarTendencias() {
 
 // Muestra el nivel de batería y la fecha de la última señal de cada tanque.
 function renderEstadoNodos() {
-  $("estado-nodos").innerHTML = tanques.map((tanque) => {
+  $("estado_nodos").innerHTML = tanques.map((tanque) => {
     const ultima = ultimaLectura(tanque.nodoId);
     if (!ultima) return "";
     return `<article class="panel"><h3>${tanque.nombre}</h3>
@@ -412,9 +343,9 @@ function renderEstadoNodos() {
 // Aplica los filtros de nodo y fechas y dibuja la tabla
 function filtrarLecturas(evento) {
   evento?.preventDefault();
-  const { nodo, desde, hasta } = Object.fromEntries(new FormData($("filtros-lecturas")));
-  if (desde && hasta && desde > hasta) return ($("error-filtros").value = "La fecha inicial no puede ser posterior a la final.");
-  $("error-filtros").value = "";
+  const { nodo, desde, hasta } = Object.fromEntries(new FormData($("filtros_lecturas")));
+  if (desde && hasta && desde > hasta) return ($("error_filtros").value = "La fecha inicial no puede ser posterior a la final.");
+  $("error_filtros").value = "";
   const filtradas = lecturas.filter((lectura) =>
     (!nodo || lectura.nodoId === nodo) &&
     (!desde || new Date(lectura.fecha) >= new Date(desde + "T00:00:00")) &&
@@ -428,7 +359,7 @@ let lecturasMostradas = [];
 function renderTablaLecturas(datos) {
   lecturasMostradas = datos;
   const celda = (lectura, variable) => `<td class="${estadoParametro(variable, lectura[variable]) === "fuera" ? "fuera" : ""}">${lectura[variable].toFixed(UMBRALES[variable].decimales)}</td>`;
-  $("cuerpo-tabla-lecturas").innerHTML = datos.slice(0, 150).map((lectura) => `<tr>
+  $("cuerpo_tabla_lecturas").innerHTML = datos.slice(0, 150).map((lectura) => `<tr>
     <td><time datetime="${lectura.fecha}">${formatearFecha(lectura.fecha)}</time></td><td>${nombreTanque(lectura.nodoId)}</td>
     ${celda(lectura, "ph")}${celda(lectura, "turbidez")}${celda(lectura, "conductividad")}${celda(lectura, "temperatura")}
     <td><span class="insignia" data-clase="${CLASES[lectura.clasificacion]}">${lectura.clasificacion}</span></td></tr>`).join("")
@@ -452,7 +383,7 @@ let severidadActiva = "todas";
 // Actualiza el filtro de severidad seleccionado y vuelve a dibujar la lista de alertas.
 function filtrarAlertas(severidad) {
   severidadActiva = severidad;
-  document.querySelectorAll("#filtros-alertas button").forEach((b) => b.classList.toggle("activa", b.dataset.severidad === severidad));
+  document.querySelectorAll("#filtros_alertas button").forEach((b) => b.classList.toggle("activa", b.dataset.severidad === severidad));
   renderAlertas();
 }
 
@@ -460,14 +391,14 @@ function filtrarAlertas(severidad) {
 function renderAlertas() {
   const etiquetas = { critica: "Crítica", advertencia: "Advertencia", resuelta: "Resuelta" };
   const visibles = alertas.filter((a) => severidadActiva === "todas" || a.severidad === severidadActiva);
-  $("lista-alertas").innerHTML = visibles.map((a) => `
+  $("lista_alertas").innerHTML = visibles.map((a) => `
     <article class="alerta" data-severidad="${a.severidad}" data-leida="${a.leida ? "si" : "no"}">
       <header><h3>${a.titulo}</h3><p>${a.mensaje}</p></header>
       <div><span class="insignia">${etiquetas[a.severidad]}</span> <time datetime="${a.fecha}">${formatearFecha(a.fecha)}</time></div>
       <footer>
-        ${a.leida ? "" : `<button type="button" class="boton-secundario" data-accion="leer" data-id="${a.id}">Marcar como leída</button>`}
-        ${a.severidad === "resuelta" ? "" : `<button type="button" class="boton-secundario" data-accion="resolver" data-id="${a.id}">Marcar como resuelta</button>`}
-        <button type="button" class="boton-principal" data-accion="ver" data-id="${a.id}">Ver en dashboard</button>
+        ${a.leida ? "" : `<button type="button" class="boton_secundario" data-accion="leer" data-id="${a.id}">Marcar como leída</button>`}
+        ${a.severidad === "resuelta" ? "" : `<button type="button" class="boton_secundario" data-accion="resolver" data-id="${a.id}">Marcar como resuelta</button>`}
+        <button type="button" class="boton_principal" data-accion="ver" data-id="${a.id}">Ver en dashboard</button>
       </footer>
     </article>`).join("") || "<p>No hay alertas activas en este momento.</p>";
   actualizarContadorAlertas();
@@ -480,83 +411,21 @@ function accionAlerta(evento) {
   const alerta = alertas.find((a) => a.id === boton.dataset.id);
   if (boton.dataset.accion === "leer") alerta.leida = true;
   if (boton.dataset.accion === "resolver") { alerta.severidad = "resuelta"; alerta.leida = true; }
-  if (boton.dataset.accion === "ver") { $("selector-tanque").value = alerta.nodoId; actualizarDashboard(); mostrarVista("vista-dashboard"); }
+  if (boton.dataset.accion === "ver") { $("selector_tanque").value = alerta.nodoId; actualizarDashboard(); mostrarVista("vista_dashboard"); }
   renderAlertas();   // Si usas el backend, aquí también se enviaría un PATCH a /alertas/:id
 }
 
 // Actualiza los contadores de alertas pendientes y la insignia de notificaciones.
 function actualizarContadorAlertas() {
   const sinLeer = alertas.filter((a) => !a.leida && a.severidad !== "resuelta").length;
-  $("contador-alertas").textContent = sinLeer;
-  const insignia = $("insignia-notificaciones");
+  $("contador_alertas").textContent = sinLeer;
+  const insignia = $("insignia_notificaciones");
   insignia.textContent = sinLeer > 99 ? "99+" : sinLeer;
   insignia.hidden = sinLeer === 0;
-  $("boton-notificaciones").setAttribute(
+  $("boton_notificaciones").setAttribute(
     "aria-label",
     sinLeer ? `Ver notificaciones, ${sinLeer} sin leer` : "Ver notificaciones, ninguna sin leer"
   );
-}
-
-/* ============================ CHAT CON LLAMA AI ============================ */
-
-const TIEMPO_MAXIMO_CHAT_MS = 15000;
-
-// Abre el chat y, opcionalmente, envía una pregunta inicial desde el botón de interpretación.
-function abrirChat(preguntaInicial) {
-  $("chat-ia").hidden = false;
-  $("boton-chat").hidden = true;
-  if (!$("chat-mensajes").children.length) agregarMensaje("ia", "Hola, soy el asistente de calidad del agua. Puedo explicarte la última lectura del tanque y darte recomendaciones de uso.");
-  if (preguntaInicial) enviarPregunta(preguntaInicial);
-  else $("chat-entrada").focus();
-}
-
-function cerrarChat() {
-  $("chat-ia").hidden = true;
-  $("boton-chat").hidden = false;
-}
-
-// Añade al historial un mensaje de usuario o del asistente y desplaza el chat al final.
-function agregarMensaje(autor, texto) {
-  const mensaje = document.createElement("li");
-  mensaje.dataset.autor = autor;
-  mensaje.textContent = texto;
-  $("chat-mensajes").append(mensaje);
-  $("chat-mensajes").scrollTop = $("chat-mensajes").scrollHeight;
-}
-
-// Solo letras, números y signos básicos de puntuación
-const preguntaValida = (pregunta) => /^[\p{L}\p{N}\s¿?¡!.,:;()%/-]+$/u.test(pregunta);
-
-// Respuesta simulada. En producción el backend arma el prompt con la lectura actual y llama a Llama AI.
-function responderDemo(pregunta) {
-  const ultima = ultimaLectura(nodoActual());
-  const preguntaNormalizada = pregunta.toLowerCase();
-  const resumen = `Última lectura: pH ${ultima.ph.toFixed(1)}, turbidez ${ultima.turbidez.toFixed(1)} NTU, conductividad ${ultima.conductividad.toFixed(0)} µS/cm. Clasificación: ${ultima.clasificacion}.`;
-  const consejo = (REPORTES_DEMO[ultima.clasificacion] ?? ["", []])[1].join(". ");
-  if (/beb|consum|tomar|cocin|segur|apta|interpret|lectura|diagn|recomend/.test(preguntaNormalizada)) return `${resumen}\n${REPORTES_DEMO[ultima.clasificacion][0]}\n${consejo}.`;
-  if (/turbidez/.test(preguntaNormalizada)) return `La turbidez mide qué tan turbia está el agua por sedimentos. El límite de referencia es ${UMBRALES.turbidez.max} NTU y ahora está en ${ultima.turbidez.toFixed(1)} NTU. Después de lluvias suele subir.`;
-  if (/conductividad/.test(preguntaNormalizada)) return `La conductividad indica la cantidad de sales disueltas. Ahora está en ${ultima.conductividad.toFixed(0)} µS/cm y el límite es ${UMBRALES.conductividad.max}.`;
-  if (/ph|riego|agua|tanque|sensor|bater/.test(preguntaNormalizada)) return `${resumen}\nPara riego, estos valores son aceptables mientras la clasificación no sea "No apta".`;
-  return "Soy un asistente especializado en el monitoreo del agua de tu comunidad. Hazme preguntas sobre la calidad del agua o las recomendaciones de uso.";
-}
-
-async function enviarPregunta(pregunta) {
-  pregunta = pregunta.trim();
-  if (!pregunta) return;
-  if (!preguntaValida(pregunta)) return agregarMensaje("ia", "Escribe tu pregunta usando solo letras, números y signos de puntuación.");
-  agregarMensaje("usuario", pregunta);
-  $("chat-entrada").value = "";
-  $("chat-estado").hidden = false;
-  try {
-    const consulta = CONFIG.usarDatosDemo
-      ? new Promise((resolverConsulta) => setTimeout(() => resolverConsulta({ respuesta: responderDemo(pregunta) }), 700))
-      : llamarApi(CONFIG.endpoints.chat, { method: "POST", body: JSON.stringify({ nodoId: nodoActual(), pregunta }) });
-    const limite = new Promise((_, rechazarConsulta) => setTimeout(() => rechazarConsulta(new Error("tiempo agotado")), TIEMPO_MAXIMO_CHAT_MS));
-    agregarMensaje("ia", (await Promise.race([consulta, limite])).respuesta);
-  } catch {
-    agregarMensaje("ia", "No fue posible conectar con el asistente de IA en este momento. Consulta las métricas y el estado en el Dashboard principal.");
-  }
-  $("chat-estado").hidden = true;
 }
 
 /* ============================ INICIO ============================ */
@@ -564,11 +433,11 @@ async function enviarPregunta(pregunta) {
 // Rellena los selectores de tanque y medición con las opciones disponibles.
 function llenarSelectores() {
   const opcionesNodos = tanques.map((tanque) => `<option value="${tanque.nodoId}">${tanque.nombre}</option>`).join("");
-  $("selector-tanque").innerHTML = opcionesNodos;
-  $("filtro-nodo").innerHTML = `<option value="">Todos los nodos</option>${opcionesNodos}`;
+  $("selector_tanque").innerHTML = opcionesNodos;
+  $("filtro_nodo").innerHTML = `<option value="">Todos los nodos</option>${opcionesNodos}`;
   const opcionesVariables = VARIABLES.map((variable) => `<option value="${variable}">${UMBRALES[variable].nombre}</option>`).join("");
-  $("variable-grafica-principal").innerHTML = opcionesVariables;
-  $("variable-tendencia").innerHTML = opcionesVariables;
+  $("variable_grafica_principal").innerHTML = opcionesVariables;
+  $("variable_tendencia").innerHTML = opcionesVariables;
 }
 
 // Carga los datos iniciales y actualiza los componentes de todas las secciones.
@@ -581,54 +450,36 @@ async function iniciarAplicacion() {
   renderEstadoNodos();
   filtrarLecturas();
   renderAlertas();
-  mostrarVista("vista-dashboard");
+  mostrarVista("vista_dashboard");
 }
 
-// Asocia los controles del HTML con sus funciones para navegación, formularios, filtros y chat.
+// Asocia los controles del dashboard con sus funciones de navegación y filtros.
 function conectarEventos() {
-  const formularioLogin = $("form-login");
-  if (formularioLogin) {
-    if (sesion) {
-      window.location.replace("index.html");
-      return;
-    }
-    formularioLogin.addEventListener("submit", iniciarSesion);
+  if (!$("aplicacion")) {
+    if (sesion) window.location.replace("dashboard.html");
     return;
   }
-
-  const formularioRegistro = $("form-registro");
-  if (formularioRegistro) {
-    if (sesion) {
-      window.location.replace("index.html");
-      return;
-    }
-    formularioRegistro.addEventListener("submit", registrarUsuario);
-    return;
-  }
-
-  if (!$("aplicacion")) return;
   if (!sesion) {
     window.location.replace("login.html");
     return;
   }
-  $("nombre-usuario").textContent = sesion.nombre;
-  $("boton-cerrar-sesion").addEventListener("click", cerrarSesion);
-  $("menu-principal").addEventListener("click", (evento) => evento.target.closest("button") && mostrarVista(evento.target.closest("button").dataset.vista));
-  $("boton-notificaciones").addEventListener("click", () => mostrarVista("vista-alertas"));
-  $("selector-tanque").addEventListener("change", () => { actualizarDashboard(); actualizarTendencias(); });
-  $("variable-grafica-principal").addEventListener("change", dibujarGraficaPrincipal);
-  $("filtros-lecturas").addEventListener("submit", filtrarLecturas);
-  $("boton-exportar").addEventListener("click", exportarCSV);
-  $("filtros-alertas").addEventListener("click", (evento) => evento.target.dataset.severidad && filtrarAlertas(evento.target.dataset.severidad));
-  $("lista-alertas").addEventListener("click", accionAlerta);
-  $("boton-chat").addEventListener("click", () => abrirChat());
-  $("boton-interpretar").addEventListener("click", () => abrirChat("Interpreta la última lectura del tanque y dame recomendaciones."));
-  $("boton-cerrar-chat").addEventListener("click", cerrarChat);
-  $("form-chat").addEventListener("submit", (evento) => { evento.preventDefault(); enviarPregunta($("chat-entrada").value); });
-  $("chat-sugerencias").addEventListener("click", (evento) => evento.target.dataset.pregunta && enviarPregunta(evento.target.dataset.pregunta));
-  $("boton-menu").addEventListener("click", () => document.querySelector(".barra-lateral").classList.toggle("abierta"));
-  $("filtros-tendencias").addEventListener("submit", (evento) => { evento.preventDefault(); actualizarTendencias(); });
+  $("nombre_usuario").textContent = sesion.nombre;
+  $("boton_cerrar_sesion").addEventListener("click", cerrarSesion);
+  $("menu_principal").addEventListener("click", (evento) => evento.target.closest("button") && mostrarVista(evento.target.closest("button").dataset.vista));
+  $("boton_notificaciones").addEventListener("click", () => mostrarVista("vista_alertas"));
+  $("selector_tanque").addEventListener("change", () => { actualizarDashboard(); actualizarTendencias(); });
+  $("variable_grafica_principal").addEventListener("change", dibujarGraficaPrincipal);
+  $("filtros_lecturas").addEventListener("submit", filtrarLecturas);
+  $("boton_exportar").addEventListener("click", exportarCSV);
+  $("filtros_alertas").addEventListener("click", (evento) => evento.target.dataset.severidad && filtrarAlertas(evento.target.dataset.severidad));
+  $("lista_alertas").addEventListener("click", accionAlerta);
+  $("boton_menu").addEventListener("click", () => document.querySelector(".barra_lateral").classList.toggle("abierta"));
+  $("filtros_tendencias").addEventListener("submit", (evento) => { evento.preventDefault(); actualizarTendencias(); });
   iniciarAplicacion();
 }
 
-conectarEventos();
+if ($("aplicacion")) {
+  conectarEventos();
+} else if (sesion) {
+  window.location.replace("dashboard.html");
+}

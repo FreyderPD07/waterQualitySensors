@@ -7,60 +7,61 @@
   <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
-  <main class="vista vista-acceso">
-    <aside class="panel-marca">
-      <h1 class="marca-acceso">
+  <main class="vista vista_acceso">
+    <aside class="panel_marca">
+      <h1 class="marca_acceso">
         <svg class="icono" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
-        <span>qaterMLdetect</span>
+        <span>WaterMLdetect</span>
       </h1>
-      <p class="mensaje-marca">El agua de tu comunidad, bajo control.</p>
+      <p class="mensaje_marca">El agua de tu comunidad, bajo control.</p>
     </aside>
 
-    <section class="panel-formulario" aria-labelledby="titulo-registro">
-      <form id="form-registro" novalidate>
-        <header class="encabezado-formulario">
-          <h2 id="titulo-registro">Crear una cuenta</h2>
+    <section class="panel_formulario" aria-labelledby="titulo_registro">
+      <form id="form_registro" novalidate>
+        <header class="encabezado_formulario">
+          <h2 id="titulo_registro">Crear una cuenta</h2>
           <p>Regístrate para seguir las mediciones de tu comunidad.</p>
         </header>
         <fieldset>
           <legend>Datos de la cuenta</legend>
           <p>
-            <label for="reg-usuario">Usuario (letras y números)</label>
-            <input id="reg-usuario" type="text" name="usuario" maxlength="50">
+            <label for="reg_usuario">Usuario (letras y números)</label>
+            <input id="reg_usuario" type="text" name="usuario" maxlength="50">
           </p>
           <p>
-            <label for="reg-nombre">Nombres y apellidos</label>
-            <input id="reg-nombre" type="text" name="nombre" maxlength="50">
+            <label for="reg_nombre">Nombres y apellidos</label>
+            <input id="reg_nombre" type="text" name="nombre" maxlength="50">
           </p>
           <p>
-            <label for="reg-email">Correo electrónico</label>
-            <input id="reg-email" type="email" name="email" maxlength="80">
+            <label for="reg_email">Correo electrónico</label>
+            <input id="reg_email" type="email" name="email" maxlength="80">
           </p>
           <p>
-            <label for="reg-telefono">Teléfono</label>
-            <input id="reg-telefono" type="tel" name="telefono" maxlength="15">
+            <label for="reg_telefono">Teléfono</label>
+            <input id="reg_telefono" type="tel" name="telefono" maxlength="15">
           </p>
           <p>
-            <label for="reg-vereda">Vereda o comunidad</label>
-            <input id="reg-vereda" type="text" name="vereda" maxlength="80" value="San Pedro">
+            <label for="reg_vereda">Vereda o comunidad</label>
+            <input id="reg_vereda" type="text" name="vereda" maxlength="80" value="San Pedro">
           </p>
           <p>
-            <label for="reg-clave">Contraseña (8 a 12 caracteres, con mayúscula, número y símbolo)</label>
-            <input id="reg-clave" type="password" name="password" autocomplete="new-password">
+            <label for="reg_clave">Contraseña (8 a 12 caracteres, con mayúscula, número y símbolo)</label>
+            <input id="reg_clave" type="password" name="password" autocomplete="new-password">
           </p>
           <p>
-            <label for="reg-confirmacion">Confirmar contraseña</label>
-            <input id="reg-confirmacion" type="password" name="confirmacion" autocomplete="new-password">
+            <label for="reg_confirmacion">Confirmar contraseña</label>
+            <input id="reg_confirmacion" type="password" name="confirmacion" autocomplete="new-password">
           </p>
         </fieldset>
-        <output class="mensaje-error" id="error-registro" aria-live="polite"></output>
-        <button type="submit" class="boton-principal">Crear cuenta</button>
+        <output class="mensaje_error" id="error_registro" aria-live="polite"></output>
+        <button type="submit" class="boton_principal">Crear cuenta</button>
       </form>
 
       <p>¿Ya tienes una cuenta? <a href="login.html">Inicia sesión</a></p>
     </section>
   </main>
 
-  <script src="app/script.js"></script>
+  <script src="app/index.js"></script>
+  <script src="app/registro.js"></script>
 </body>
 </html>

@@ -9,8 +9,8 @@ async function iniciarSesion(evento) {
       ? { nombre: email.split("@")[0], rol: "comunero", token: "demo" }
       : await llamarApi(CONFIG.endpoints.login, { method: "POST", body: JSON.stringify({ email, password }) }).then((respuestaLogin) => ({ ...respuestaLogin.usuario, token: respuestaLogin.token }));
     $("error_login").value = "";
-  } catch {
-    $("error_login").value = "El correo electrónico o la contraseña son incorrectos.";
+  } catch (error) {
+    $("error_login").value = error.message || "El correo electrónico o la contraseña son incorrectos.";
     return;
   }
   entrarALaAplicacion();

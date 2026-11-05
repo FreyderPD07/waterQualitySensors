@@ -19,10 +19,14 @@ async function registrarUsuario(evento) {
   $("error_registro").value = error;
   if (error) return;
   try {
-    if (!CONFIG.usarDatosDemo) await llamarApi(CONFIG.endpoints.registro, { method: "POST", body: JSON.stringify(datos) });
-    sesion = { nombre: datos.nombre, rol: "comunero", token: "demo" };
-  } catch {
-    $("error_registro").value = "No se pudo crear la cuenta. Revisa si el correo ya está registrado.";
+    if (CONFIG.usarDatosDemo) {
+      sesion = { nombre: datos.nombre, rol: "comunero", token: "demo" };
+    } else {
+      const respuesta = await llamarApi(CONFIG.endpoints.registro, { method: "POST", body: JSON.stringify(datos) });
+      sesion = { ...respuesta.usuario, token: respuesta.token };
+    }
+  } catch (error) {
+    $("error_registro").value = error.message || "No se pudo crear la cuenta. Revisa si el correo ya está registrado.";
     return;
   }
   entrarALaAplicacion();

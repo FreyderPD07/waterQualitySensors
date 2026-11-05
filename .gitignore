@@ -9,7 +9,22 @@ npm-debug.log*
 
 # Variables de entorno
 .env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Docker volúmenes locales
+mosquitto/data/
+mosquitto/log/
+
+# Build outputs
+dist/
+build/
 
 # Editor y sistema
 .vscode/
+.idea/
 .DS_Store
+Thumbs.db

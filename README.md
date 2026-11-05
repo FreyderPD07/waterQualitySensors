@@ -171,3 +171,27 @@ flowchart TD
 - La base de datos NoSQL se elige por su flexibilidad ante estructuras de datos variables provenientes de distintos tipos de sensores.
 - Si la prioridad es análisis temporal (series de tiempo), **InfluxDB** es preferible sobre MongoDB.
 - El sistema está diseñado para ser **extensible**: agregar nuevos tipos de sensores o nuevas vistas no requiere modificar las capas subyacentes.
+
+---
+
+## Licencia y Autoría
+
+© 2026 **waterQualitySensors** 
+
+Todos los derechos reservados. Este proyecto, su código fuente, diseño de arquitectura y documentación son propiedad de helioMind Labs. Queda prohibida su reproducción, distribución o uso comercial sin autorización expresa por el equipo.
+
+---
+
+## Ejecución integrada (frontend + gateway)
+
+El gateway Fastify sirve el sitio y su API en el mismo origen, por defecto en `http://localhost:4000`.
+
+1. En `gateway/.env`, configura `MONGO_URL`, `MQTT_URL`, `MQTT_USERNAME` y `MQTT_PASSWORD`. Define también un `TOKEN_SECRET` aleatorio de al menos 32 caracteres. No compartas ni subas este archivo.
+2. Desde la carpeta `gateway`, instala dependencias con `npm install`.
+3. Arranca el servicio con `npm run dev` y abre `http://localhost:4000`.
+4. Crea una cuenta desde **Crear mi cuenta**. Las cuentas y lecturas se guardan en MongoDB.
+5. Ejecuta `npm test` desde `gateway` para probar la entrega del frontend, la salud de la API, la autenticación básica y la normalización de lecturas sin necesitar MongoDB.
+
+El frontend usa datos reales (modo demo desactivado). Las rutas privadas disponibles son `POST /api/auth/registro`, `POST /api/auth/login`, `GET /api/tanques`, `GET /api/lecturas`, `GET /api/alertas`, `GET /api/ia/reporte` y `POST /api/ia/chat`. El asistente usa reglas locales si no se configura un servidor compatible con OpenAI mediante `LLM_URL` en `gateway/.env`.
+
+El gateway espera los parámetros `ph`, `turbidez`, `conductividad` y `temperature` (o `temperatura`) dentro del `decoded_payload` de TTN. Confirma que los nombres coincidan con el decoder real del sensor.

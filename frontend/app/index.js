@@ -11,8 +11,8 @@
    ===================================================================== */
 
 const CONFIG = {
-  usarDatosDemo: true,                    // false = consumir el backend real
-  apiBase: "http://localhost:3000/api",   // URL base de la API; se concatena con cada ruta de endpoints
+  usarDatosDemo: false,                   // false = consumir el backend real
+  apiBase: `${window.location.origin}/api`, // API del mismo gateway que sirve el frontend
   endpoints: {
     login: "/auth/login",                 // POST {email, password} -> {token, usuario:{nombre, rol}}
     registro: "/auth/registro",           // POST {usuario, nombre, email, telefono, vereda, password}
@@ -70,11 +70,35 @@ function recuperarSesion() {
 
 async function llamarApi(ruta, opciones = {}) {
   // Todas las solicitudes usan la URL base, JSON y, si existe, el token de la sesión activa.
-  const respuesta = await fetch(CONFIG.apiBase + ruta, {
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${sesion?.token ?? ""}` },
-    ...opciones
-  });
-  if (!respuesta.ok) throw new Error(`Error ${respuesta.status}`);
+  let respuesta;
+  try {
+    respuesta = await fetch(CONFIG.apiBase + ruta, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${sesion?.token ?? ""}` },
+      ...opciones
+    });
+  } catch {
+    throw new Error(`No se pudo conectar con el gateway en ${window.location.origin}. Verifica que esté ejecutándose.`);
+  }
+
+  // Si el token venció, se cierra la sesión y se vuelve al login.
+  if (respuesta.status === 401 && sesion?.token) {
+    sesion = null;
+    sessionStorage.removeItem(CLAVE_SESION);
+    window.location.replace("login.html");
+    throw new Error("La sesión expiró. Vuelve a iniciar sesión.");
+  }
+
+  if (!respuesta.ok) {
+    let mensaje = `Error ${respuesta.status}`;
+    try {
+      const cuerpo = await respuesta.json();
+      if (cuerpo?.message) mensaje = cuerpo.message;
+    } catch {
+      // La respuesta no traía JSON; se conserva el mensaje genérico.
+    }
+    throw new Error(mensaje);
+  }
+
   return respuesta.json();
 }
 
@@ -442,15 +466,25 @@ function llenarSelectores() {
 
 // Carga los datos iniciales y actualiza los componentes de todas las secciones.
 async function iniciarAplicacion() {
-  await cargarTanques();
-  await cargarLecturas();
-  await cargarAlertas();
-  llenarSelectores();
-  actualizarDashboard();
-  renderEstadoNodos();
-  filtrarLecturas();
-  renderAlertas();
-  mostrarVista("vista_dashboard");
+  try {
+    await cargarTanques();
+    await cargarLecturas();
+    await cargarAlertas();
+    llenarSelectores();
+    actualizarDashboard();
+    renderEstadoNodos();
+    filtrarLecturas();
+    renderAlertas();
+    mostrarVista("vista_dashboard");
+  } catch (error) {
+    console.error("No se pudo cargar la aplicación:", error);
+    $("fecha_ultima_lectura").textContent = "Sin conexión";
+    $("clasificacion_general").textContent = "Error de conexión";
+    $("clasificacion_general").dataset.clase = "no_apta";
+    $("ia_explicacion").textContent = error.message;
+    $("ia_recomendaciones").innerHTML = "";
+    $("ia_origen").textContent = "";
+  }
 }
 
 // Asocia los controles del dashboard con sus funciones de navegación y filtros.

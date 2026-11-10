@@ -108,6 +108,8 @@ export async function requireAuth(request, reply) {
 }
 
 export async function prepararIndices() {
+    if (process.env.DEMO_MODE === 'true') return;
+
     try {
         const db = getDb();
         await db.collection('usuarios').createIndex({ email: 1 }, { unique: true });
@@ -119,7 +121,25 @@ export async function prepararIndices() {
 }
 
 export async function authRoutes(fastify) {
+    const demoMode = process.env.DEMO_MODE === 'true';
     const usuarios = () => getDb().collection('usuarios');
+    const usuariosDemo = new Map();
+
+    if (demoMode) {
+        const { salt, hash } = await crearHashClave('Agua2026!');
+        const demo = {
+            _id: 'demo-user',
+            usuario: 'demo',
+            nombre: 'Usuario de demostración',
+            email: 'demo@watermldetect.com',
+            telefono: '3001234567',
+            vereda: 'San Pedro',
+            passwordSalt: salt,
+            passwordHash: hash,
+            rol: 'comunero'
+        };
+        usuariosDemo.set(demo.email, demo);
+    }
 
     fastify.post('/api/auth/registro', async (request, reply) => {
         const error = validarRegistro(request.body);
@@ -129,7 +149,9 @@ export async function authRoutes(fastify) {
         const email = datos.email.trim().toLowerCase();
         const usuario = datos.usuario.trim();
 
-        const existente = await usuarios().findOne({ $or: [{ email }, { usuario }] });
+        const existente = demoMode
+            ? [...usuariosDemo.values()].find((item) => item.email === email || item.usuario === usuario)
+            : await usuarios().findOne({ $or: [{ email }, { usuario }] });
         if (existente) {
             return reply.code(409).send({ status: 'error', message: 'El correo o el usuario ya está registrado.' });
         }
@@ -147,14 +169,19 @@ export async function authRoutes(fastify) {
             creadoEn: new Date().toISOString()
         };
 
-        try {
-            const resultado = await usuarios().insertOne(documento);
-            documento._id = resultado.insertedId;
-        } catch (error) {
-            if (error.code === 11000) {
-                return reply.code(409).send({ status: 'error', message: 'El correo o el usuario ya está registrado.' });
+        if (demoMode) {
+            documento._id = `demo-user-${usuariosDemo.size}`;
+            usuariosDemo.set(email, documento);
+        } else {
+            try {
+                const resultado = await usuarios().insertOne(documento);
+                documento._id = resultado.insertedId;
+            } catch (error) {
+                if (error.code === 11000) {
+                    return reply.code(409).send({ status: 'error', message: 'El correo o el usuario ya está registrado.' });
+                }
+                throw error;
             }
-            throw error;
         }
 
         return reply.code(201).send({
@@ -169,7 +196,10 @@ export async function authRoutes(fastify) {
             return reply.code(400).send({ status: 'error', message: 'Correo y contraseña son obligatorios.' });
         }
 
-        const usuario = await usuarios().findOne({ email: email.trim().toLowerCase() });
+        const correo = email.trim().toLowerCase();
+        const usuario = demoMode
+            ? usuariosDemo.get(correo)
+            : await usuarios().findOne({ email: correo });
         if (!usuario) {
             return reply.code(401).send({ status: 'error', message: 'Correo o contraseña incorrectos.' });
         }

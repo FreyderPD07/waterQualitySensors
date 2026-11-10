@@ -13,11 +13,17 @@ import { ttnSensorRoutes } from './ttnSensor.js';
 
 const directorio = path.dirname(fileURLToPath(import.meta.url));
 const app = Fastify({ logger: true });
+const demoMode = process.env.DEMO_MODE === 'true';
 
 await app.register(fastifyCors, { origin: true });
 await app.register(fastifyStatic, {
     root: path.join(directorio, '..', '..', 'frontend'),
     prefix: '/'
+});
+await app.register(fastifyStatic, {
+    root: path.join(directorio, '..', 'node_modules', 'chart.js', 'dist'),
+    prefix: '/vendor/',
+    decorateReply: false
 });
 
 await app.register(authRoutes);
@@ -33,9 +39,13 @@ app.setNotFoundHandler((request, reply) => {
 
 const start = async () => {
     try {
-        await conectMongoDB();
-        await prepararIndices();
-        await connectMqtt();
+        if (demoMode) {
+            app.log.warn('DEMO_MODE activo: no se conectará a MongoDB ni MQTT y no se guardarán lecturas.');
+        } else {
+            await conectMongoDB();
+            await prepararIndices();
+            await connectMqtt();
+        }
 
         await app.listen({
             port: Number(process.env.PORT) || 4000,
@@ -52,8 +62,10 @@ const start = async () => {
 
 const cerrar = async () => {
     await app.close();
-    await cerrarMqtt();
-    await cerrarMongoDB();
+    if (!demoMode) {
+        await cerrarMqtt();
+        await cerrarMongoDB();
+    }
     process.exit(0);
 };
 

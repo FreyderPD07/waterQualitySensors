@@ -19,6 +19,10 @@
     <symbol id="i_chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4zM8 10h8M8 13h5"/></symbol>
     <symbol id="i_cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i_salir" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+    <symbol id="i_chispa" viewBox="0 0 24 24"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></symbol>
+    <symbol id="i_enviar" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-6z"/><path d="M11 14l3-3"/></symbol>
+    <symbol id="i_nuevo" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></symbol>
+    <symbol id="i_copiar" viewBox="0 0 24 24"><path d="M9 9h10v10H9z"/><path d="M5 15V5h10"/></symbol>
   </svg>
 
   <main>
@@ -110,16 +114,31 @@
                   </dl>
                 </article>
 
-                <!-- Panel de Interpretación por Inteligencia Artificial (Llama AI) -->
-                <article class="panel" id="reporte_ia">
-                  <h3>Interpretación de Llama AI</h3>
+                <!-- Panel de interpretación con HelioWater -->
+                <article class="panel panel_ia" id="reporte_ia" aria-labelledby="ia_titulo">
+                  <header class="ia_encabezado">
+                    <span class="ia_avatar" aria-hidden="true"><svg class="icono"><use href="#i_logo"/></svg></span>
+                    <div class="ia_identidad">
+                      <h3 id="ia_titulo">HelioWater</h3>
+                      <p><span class="ia_punto" aria-hidden="true"></span> Asistente de calidad del agua</p>
+                    </div>
+                    <span class="ia_insignia"><svg class="icono" aria-hidden="true"><use href="#i_chispa"/></svg> Análisis en vivo</span>
+                  </header>
+
                   <!-- Explicación en lenguaje claro del estado del agua -->
-                  <p id="ia_explicacion">Cargando explicación…</p>
-                  <!-- Lista <ul> de recomendaciones generadas por el modelo Llama -->
-                  <ul id="ia_recomendaciones"></ul>
+                  <div class="ia_mensaje">
+                    <p id="ia_explicacion">HelioWater está analizando los registros del tanque…</p>
+                  </div>
+
+                  <!-- Lista de recomendaciones generadas por el modelo de IA -->
+                  <div class="ia_recomendaciones" id="ia_bloque_recomendaciones" hidden>
+                    <h4>Recomendaciones para tu comunidad</h4>
+                    <ul id="ia_recomendaciones"></ul>
+                  </div>
+
                   <!-- Detalle técnico de los parámetros usados para el reporte -->
                   <small id="ia_origen"></small>
-                  <button type="button" id="boton_interpretar" class="boton_principal"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg>¿Necesitas que te interprete la lectura?</button>
+                  <button type="button" id="boton_interpretar" class="boton_principal ia_cta"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg>Conversar con HelioWater</button>
                 </article>
               </aside>
             </section>
@@ -217,42 +236,68 @@
         </div>
       </div>
 
-      <!-- ---------- ASISTENTE FLOTANTE DE CONVERSACIÓN (LLAMA AI) ---------- -->
-      <!-- Botón flotante para desplegar la ventana del Chat de Asistencia -->
-      <button type="button" id="boton_chat" class="boton_flotante"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg>Preguntar a Llama AI</button>
-      
-      <!-- Ventana desplegable del chat con el modelo de lenguaje -->
-      <aside id="chat_ia" class="chat" aria-label="Asistente Llama AI" hidden>
-        <header>
-          <h2>Asistente Llama AI</h2>
-          <button type="button" id="boton_cerrar_chat" class="boton_icono" aria-label="Cerrar chat"><svg class="icono" aria-hidden="true"><use href="#i_cerrar"/></svg></button>
+      <!-- ---------- ASISTENTE FLOTANTE HELIOWATER ---------- -->
+      <!-- Botón flotante para desplegar la conversación -->
+      <button type="button" id="boton_chat" class="boton_flotante" aria-controls="chat_ia" aria-label="Abrir chat con HelioWater">
+        <span class="boton_flotante_avatar" aria-hidden="true"><svg class="icono"><use href="#i_logo"/></svg></span>
+        <span class="boton_flotante_texto"><strong>HelioWater</strong><small>Asistente de calidad del agua</small></span>
+        <span class="boton_flotante_punto" aria-hidden="true"></span>
+      </button>
+
+      <!-- Ventana desplegable del chat -->
+      <aside id="chat_ia" class="chat" aria-label="Chat con HelioWater" hidden>
+        <header class="chat_encabezado">
+          <div class="chat_agente">
+            <span class="chat_avatar" aria-hidden="true">
+              <svg class="icono"><use href="#i_logo"/></svg>
+              <i class="chat_avatar_punto"></i>
+            </span>
+            <div class="chat_identidad">
+              <h2>HelioWater <span class="chat_insignia_ia"><svg class="icono" aria-hidden="true"><use href="#i_chispa"/></svg> IA</span></h2>
+              <p id="chat_contexto"><span class="chat_punto" aria-hidden="true"></span><span id="chat_contexto_texto">En línea · Analizando los registros</span></p>
+            </div>
+          </div>
+          <div class="chat_acciones">
+            <button type="button" id="boton_nueva_conversacion" class="chat_boton_accion" aria-label="Nueva conversación" title="Nueva conversación"><svg class="icono" aria-hidden="true"><use href="#i_nuevo"/></svg></button>
+            <button type="button" id="boton_cerrar_chat" class="chat_boton_accion" aria-label="Cerrar chat" title="Cerrar"><svg class="icono" aria-hidden="true"><use href="#i_cerrar"/></svg></button>
+          </div>
         </header>
-        
+
         <!-- Historial de mensajes inyectados por JS (del usuario y de la IA) -->
-        <ol id="chat_mensajes" aria-live="polite"></ol>
-        
-        <!-- Indicador de escritura del modelo de IA -->
-        <p id="chat_estado" hidden>Llama AI está escribiendo…</p>
-        
-        <!-- Botones de preguntas predeterminadas (data-pregunta) -->
-        <div id="chat_sugerencias">
-          <button type="button" data-pregunta="¿Es seguro consumir el agua hoy?">¿Es seguro beberla hoy?</button>
-          <button type="button" data-pregunta="¿Qué significa el valor de turbidez?">¿Qué es la turbidez?</button>
-          <button type="button" data-pregunta="¿El agua es apta para riego?">¿Sirve para riego?</button>
+        <ol id="chat_mensajes" role="log" aria-live="polite" aria-relevant="additions"></ol>
+
+        <!-- Indicador de análisis del asistente -->
+        <p id="chat_estado" class="chat_estado" hidden>
+          <span class="chat_puntos" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>HelioWater está revisando los registros…</span>
+        </p>
+
+        <!-- Preguntas sugeridas -->
+        <div id="chat_sugerencias" aria-label="Preguntas sugeridas">
+          <span class="chat_sugerencias_titulo">Preguntas rápidas</span>
+          <div class="chat_sugerencias_lista">
+            <button type="button" data-pregunta="¿Es seguro consumir el agua hoy?">¿Es segura para beber?</button>
+            <button type="button" data-pregunta="¿Qué significa el valor de turbidez?">Explícame la turbidez</button>
+            <button type="button" data-pregunta="¿El agua es apta para riego?">¿Sirve para riego?</button>
+            <button type="button" data-pregunta="Resume el comportamiento del tanque en las últimas 24 horas.">Resume las últimas 24 h</button>
+          </div>
         </div>
-        
-        <!-- Formulario de envío de consultas al servicio GET/POST /ia/reporte -->
+
+        <!-- Formulario de envío de consultas al servicio POST /ia/chat -->
         <form id="form_chat" novalidate>
-          <p><label for="chat_entrada" class="solo_lectores">Tu pregunta</label>
-          <input id="chat_entrada" name="pregunta" maxlength="300" autocomplete="off" placeholder="Escribe tu pregunta sobre el agua">
-          <button type="submit" class="boton_principal">Enviar</button></p>
+          <p class="chat_compositor">
+            <label for="chat_entrada" class="solo_lectores">Tu pregunta</label>
+            <input id="chat_entrada" name="pregunta" maxlength="300" autocomplete="off" placeholder="Pregúntale a HelioWater sobre el agua…">
+            <button type="submit" id="boton_enviar_chat" class="chat_enviar" aria-label="Enviar pregunta" title="Enviar"><svg class="icono" aria-hidden="true"><use href="#i_enviar"/></svg></button>
+          </p>
+          <p class="chat_pie"><span>HelioWater analiza datos de prueba del sistema.</span><span id="chat_contador">0/300</span></p>
         </form>
       </aside>
     </div>
   </main>
 
-  <!-- Librería externa para procesamiento gráfico de telemetría -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- Chart.js se sirve localmente para que las gráficas funcionen sin depender de internet. -->
+  <script src="vendor/chart.umd.js"></script>
   <!-- Manejo de las gráficas del dashboard -->
   <script src="app/grafica.js"></script>
   <script src="app/index.js"></script>

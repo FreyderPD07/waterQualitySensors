@@ -25,7 +25,14 @@ export async function ttnSensorRoutes(fastify) {
         }
     };
 
-    fastify.post('/registrar', { schema: sensorSchema }, async (request) => {
+    fastify.post('/registrar', { schema: sensorSchema }, async (request, reply) => {
+        if (process.env.DEMO_MODE === 'true') {
+            return reply.code(503).send({
+                status: 'simulacion',
+                message: 'Ruta deshabilitada durante la simulación; no se guardaron datos.'
+            });
+        }
+
         const { sensorid, ph, temperature, turbidez, conductividad } = request.body;
         const capturadoEn = new Date().toISOString();
         const datos = { ph, temperature, turbidez, conductividad };

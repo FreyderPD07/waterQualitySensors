@@ -4,7 +4,7 @@
    Flujo del sistema:
    Sensores -> Cubecell -> Dragino (LoRaWAN) -> MongoDB -> Backend
    -> Random Forest (Buena | Aceptable | Riesgo | No apta)
-   -> JSON -> Llama AI -> Backend -> esta interfaz
+   -> JSON -> IA (OpenRouter) -> Backend -> esta interfaz
 
    Para conectar con el backend: poner usarDatosDemo en false y ajustar
    apiBase y endpoints. Cada función "cargar..." indica la forma del JSON.
@@ -267,6 +267,7 @@ function actualizarDashboard() {
   renderClasificacion(ultima);
   renderEstadoRed(ultima);
   renderReporteIA(ultima);
+  if (typeof actualizarContextoChat === "function") actualizarContextoChat(ultima);
   dibujarGraficaPrincipal();
 }
 
@@ -311,15 +312,25 @@ function renderEstadoRed(ultima) {
 
 // Renderiza la explicación y recomendaciones recibidas del servicio de IA.
 async function renderReporteIA(ultima) {
+  const bloque = $("ia_bloque_recomendaciones");
+  const lista = $("ia_recomendaciones");
   try {
     const reporte = await cargarReporteIA(ultima.nodoId, ultima);
     $("ia_explicacion").textContent = reporte.explicacion;
-    $("ia_recomendaciones").innerHTML = reporte.recomendaciones.map((recomendacion) => `<li>${recomendacion}</li>`).join("");
+
+    const recomendaciones = Array.isArray(reporte.recomendaciones) ? reporte.recomendaciones.filter(Boolean) : [];
+    lista.replaceChildren(...recomendaciones.map((recomendacion) => {
+      const elemento = document.createElement("li");
+      elemento.textContent = recomendacion;
+      return elemento;
+    }));
+    bloque.hidden = recomendaciones.length === 0;
     $("ia_origen").textContent = `Basado en pH ${ultima.ph.toFixed(1)} y turbidez ${ultima.turbidez.toFixed(1)} NTU.`;
   } catch {
-    // Mensaje de contingencia si Llama AI no responde
+    // Mensaje de contingencia si la IA no responde
     $("ia_explicacion").textContent = "Explicación temporalmente no disponible. Guíate por la categoría de calidad y los valores del Dashboard.";
-    $("ia_recomendaciones").innerHTML = "";
+    lista.replaceChildren();
+    bloque.hidden = true;
     $("ia_origen").textContent = "";
   }
 }
@@ -482,7 +493,8 @@ async function iniciarAplicacion() {
     $("clasificacion_general").textContent = "Error de conexión";
     $("clasificacion_general").dataset.clase = "no_apta";
     $("ia_explicacion").textContent = error.message;
-    $("ia_recomendaciones").innerHTML = "";
+    $("ia_recomendaciones").replaceChildren();
+    $("ia_bloque_recomendaciones").hidden = true;
     $("ia_origen").textContent = "";
   }
 }

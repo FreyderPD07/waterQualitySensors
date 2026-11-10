@@ -186,12 +186,29 @@ Todos los derechos reservados. Este proyecto, su código fuente, diseño de arqu
 
 El gateway Fastify sirve el sitio y su API en el mismo origen, por defecto en `http://localhost:4000`.
 
+### Simulación para presentaciones (sin sensores, MongoDB ni MQTT)
+
+En `gateway/.env`, pon `DEMO_MODE=true`, arranca con `npm run dev` desde `gateway` y abre `http://localhost:4000`. Inicia sesión con `demo@watermldetect.com` y la contraseña `Agua2026!`. Se mostrarán dos tanques y una semana de lecturas generadas; el modo se marca como **simulación** en `/api/health` y no escribe datos en MongoDB. Para volver al modo real, cambia `DEMO_MODE=false` y configura las conexiones de abajo.
+
+### Asistente con OpenRouter
+
+El reporte y el chat usan el prompt guardado en `gateway/prompts/asistente_agua.md`. Ese archivo le indica al modelo que interprete los registros como una consulta a la base de datos, que varíe la redacción en cada respuesta y que no invente valores.
+
+1. Crea una clave en <https://openrouter.ai/keys>.
+2. En `gateway/.env`, agrega `OPENROUTER_API_KEY=sk-or-v1-...` y el modelo que quieras usar en `OPENROUTER_MODEL`. Por defecto se usa `google/gemini-3.5-flash-lite`, un modelo económico y rápido. Si el principal falla o está saturado, se prueban los modelos de `OPENROUTER_FALLBACK_MODELS` (`upstage/solar-mini4,openrouter/free` por defecto).
+3. Reinicia el gateway. En `/api/health` verás el proveedor y el modelo activos.
+4. Si la clave falla, se agota la cuota o no hay internet, el asistente responde automáticamente con el análisis local, sin romper la demostración.
+
+El modelo principal consume crédito de OpenRouter (fracciones de centavo por respuesta). Revisa tu saldo antes de la presentación. Si prefieres no gastar, cambia `OPENROUTER_MODEL` por un modelo terminado en `:free`, aunque suelen tener límites temporales más estrictos.
+
+La clave vive solo en `gateway/.env`, que Git ignora. No la escribas en el README ni en el código. Si no configuras OpenRouter, el asistente sigue funcionando con reglas locales.
+
 1. En `gateway/.env`, configura `MONGO_URL`, `MQTT_URL`, `MQTT_USERNAME` y `MQTT_PASSWORD`. Define también un `TOKEN_SECRET` aleatorio de al menos 32 caracteres. No compartas ni subas este archivo.
 2. Desde la carpeta `gateway`, instala dependencias con `npm install`.
 3. Arranca el servicio con `npm run dev` y abre `http://localhost:4000`.
 4. Crea una cuenta desde **Crear mi cuenta**. Las cuentas y lecturas se guardan en MongoDB.
 5. Ejecuta `npm test` desde `gateway` para probar la entrega del frontend, la salud de la API, la autenticación básica y la normalización de lecturas sin necesitar MongoDB.
 
-El frontend usa datos reales (modo demo desactivado). Las rutas privadas disponibles son `POST /api/auth/registro`, `POST /api/auth/login`, `GET /api/tanques`, `GET /api/lecturas`, `GET /api/alertas`, `GET /api/ia/reporte` y `POST /api/ia/chat`. El asistente usa reglas locales si no se configura un servidor compatible con OpenAI mediante `LLM_URL` en `gateway/.env`.
+El frontend usa datos reales (modo demo desactivado). Las rutas privadas disponibles son `POST /api/auth/registro`, `POST /api/auth/login`, `GET /api/tanques`, `GET /api/lecturas`, `GET /api/alertas`, `GET /api/ia/reporte` y `POST /api/ia/chat`. El asistente usa OpenRouter si existe `OPENROUTER_API_KEY`; si no, cae en reglas locales o en un servidor compatible con OpenAI configurado con `LLM_URL`.
 
 El gateway espera los parámetros `ph`, `turbidez`, `conductividad` y `temperature` (o `temperatura`) dentro del `decoded_payload` de TTN. Confirma que los nombres coincidan con el decoder real del sensor.

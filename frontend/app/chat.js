@@ -5,6 +5,8 @@ const MENSAJE_ERROR = "No pude conectar con el servicio de análisis en este mom
 const MENSAJE_INVALIDO = "Tu pregunta contiene caracteres que no puedo procesar. Escríbela usando solo letras, números y signos de puntuación.";
 
 let chatEnviando = false;
+// Historial reciente de la conversación para que la IA mantenga el contexto.
+let chatHistorial = [];
 
 // Devuelve la hora actual en formato corto para la marca de tiempo del mensaje.
 function horaChat() {
@@ -108,6 +110,7 @@ function agregarMensaje(autor, texto) {
 
 // Actualiza el texto de contexto del encabezado con el tanque y la clasificación vigente.
 function actualizarContextoChat(ultima) {
+  // Solo aplica al chat flotante del dashboard; en la página completa no hay contexto
   if (!$("chat_contexto_texto") || !ultima) return;
   const tanque = typeof nombreTanque === "function" ? nombreTanque(ultima.nodoId) : ultima.nodoId;
   $("chat_contexto_texto").textContent = `En línea · ${tanque} · Calidad ${ultima.clasificacion.toLowerCase()}`;
@@ -115,6 +118,7 @@ function actualizarContextoChat(ultima) {
 
 // Limpia el historial y comienza una conversación nueva con el saludo inicial.
 function nuevaConversacion() {
+  chatHistorial = [];
   $("chat_mensajes").replaceChildren();
   agregarMensaje("ia", MENSAJE_BIENVENIDA);
   $("chat_entrada").value = "";
@@ -143,11 +147,13 @@ const preguntaValida = (pregunta) => /^[\p{L}\p{N}\s¿?¡!.,:;()%/-]+$/u.test(pr
 
 // Respuesta simulada. En producción el backend consulta la IA con la lectura y los registros recientes.
 function responderDemo(pregunta) {
-  const ultima = ultimaLectura(nodoActual());
+  const ultima = (typeof nodoActual === "function" && $("selector_tanque")) ? ultimaLectura(nodoActual()) : lecturas.at(-1);
+  if (!ultima) return "Aún no hay lecturas disponibles para analizar. Intenta de nuevo cuando el sensor envíe datos.";
+  const reporteDemo = REPORTES_DEMO[ultima.clasificacion] || REPORTES_DEMO["Aceptable"];
   const preguntaNormalizada = pregunta.toLowerCase();
   const resumen = `Última lectura: pH ${ultima.ph.toFixed(1)}, turbidez ${ultima.turbidez.toFixed(1)} NTU, conductividad ${ultima.conductividad.toFixed(0)} µS/cm. Clasificación: ${ultima.clasificacion}.`;
-  const consejo = (REPORTES_DEMO[ultima.clasificacion] ?? ["", []])[1].join(". ");
-  if (/beb|consum|tomar|cocin|segur|apta|interpret|lectura|diagn|recomend/.test(preguntaNormalizada)) return `${resumen}\n${REPORTES_DEMO[ultima.clasificacion][0]}\n${consejo}.`;
+  const consejo = reporteDemo[1].join(". ");
+  if (/beb|consum|tomar|cocin|segur|apta|interpret|lectura|diagn|recomend/.test(preguntaNormalizada)) return `${resumen}\n${reporteDemo[0]}\n${consejo}.`;
   if (/turbidez/.test(preguntaNormalizada)) return `La turbidez mide qué tan turbia está el agua por sedimentos. El límite de referencia es ${UMBRALES.turbidez.max} NTU y ahora está en ${ultima.turbidez.toFixed(1)} NTU. Después de lluvias suele subir.`;
   if (/conductividad/.test(preguntaNormalizada)) return `La conductividad indica la cantidad de sales disueltas. Ahora está en ${ultima.conductividad.toFixed(0)} µS/cm y el límite es ${UMBRALES.conductividad.max}.`;
   if (/ph|riego|agua|tanque|sensor|bater/.test(preguntaNormalizada)) return `${resumen}\nPara riego, estos valores son aceptables mientras la clasificación no sea "No apta".`;
@@ -180,12 +186,21 @@ async function enviarPregunta(pregunta) {
   actualizarContadorChat();
   establecerEstadoEnvio(true);
 
+  // Nodo de referencia solo cuando el chat está dentro del dashboard; en la página completa se omite.
+  const nodoId = (typeof nodoActual === "function" && $("selector_tanque")) ? nodoActual() : undefined;
+
   try {
     const consulta = CONFIG.usarDatosDemo
       ? new Promise((resolverConsulta) => setTimeout(() => resolverConsulta({ respuesta: responderDemo(pregunta) }), 700))
-      : llamarApi(CONFIG.endpoints.chat, { method: "POST", body: JSON.stringify({ nodoId: nodoActual(), pregunta }) });
+      : llamarApi(CONFIG.endpoints.chat, {
+          method: "POST",
+          body: JSON.stringify({ nodoId, pregunta, historial: chatHistorial.slice(-8) })
+        });
     const limite = new Promise((_, rechazarConsulta) => setTimeout(() => rechazarConsulta(new Error("tiempo agotado")), TIEMPO_MAXIMO_CHAT_MS));
-    agregarMensaje("ia", (await Promise.race([consulta, limite])).respuesta);
+    const respuesta = (await Promise.race([consulta, limite])).respuesta;
+    agregarMensaje("ia", respuesta);
+    chatHistorial.push({ rol: "usuario", contenido: pregunta }, { rol: "ia", contenido: respuesta });
+    chatHistorial = chatHistorial.slice(-12);
   } catch {
     agregarMensaje("ia", MENSAJE_ERROR);
   } finally {
@@ -195,20 +210,34 @@ async function enviarPregunta(pregunta) {
 }
 
 function conectarChat() {
-  if (!$("boton_chat")) return;
-  $("boton_chat").addEventListener("click", () => abrirChat());
-  $("boton_interpretar").addEventListener("click", () => abrirChat("Interpreta la última lectura del tanque y dame recomendaciones."));
-  $("boton_cerrar_chat").addEventListener("click", cerrarChat);
-  $("boton_nueva_conversacion").addEventListener("click", nuevaConversacion);
-  $("form_chat").addEventListener("submit", (evento) => { evento.preventDefault(); enviarPregunta($("chat_entrada").value); });
-  $("chat_entrada").addEventListener("input", actualizarContadorChat);
-  $("chat_sugerencias").addEventListener("click", (evento) => {
-    const boton = evento.target.closest("button[data-pregunta]");
-    if (boton) enviarPregunta(boton.dataset.pregunta);
-  });
-  document.addEventListener("keydown", (evento) => {
-    if (evento.key === "Escape" && !$("chat_ia").hidden) cerrarChat();
-  });
+  // El chat existe en dos contextos: ventana flotante del dashboard y página completa chat.html.
+  const esFlotante = Boolean($("boton_chat"));
+  const esPagina = Boolean($("chat_pagina"));
+  if (!esFlotante && !esPagina) return;
+
+  if (esFlotante) {
+    $("boton_chat").addEventListener("click", () => abrirChat());
+    $("boton_interpretar")?.addEventListener("click", () => abrirChat("Interpreta la última lectura del tanque y dame recomendaciones."));
+    $("boton_cerrar_chat")?.addEventListener("click", cerrarChat);
+    document.addEventListener("keydown", (evento) => {
+      if (evento.key === "Escape" && $("chat_ia") && !$("chat_ia").hidden) cerrarChat();
+    });
+  } else if (!$("chat_mensajes").children.length) {
+    agregarMensaje("ia", MENSAJE_BIENVENIDA);
+    $("chat_entrada").focus();
+  }
+
+  $("boton_nueva_conversacion")?.addEventListener("click", nuevaConversacion);
+  $("form_chat")?.addEventListener("submit", (evento) => { evento.preventDefault(); enviarPregunta($("chat_entrada").value); });
+  $("chat_entrada")?.addEventListener("input", actualizarContadorChat);
+  // Las preguntas sugeridas solo aplican al chat flotante del dashboard
+  if (esFlotante && $("chat_sugerencias")) {
+    $("chat_sugerencias").addEventListener("click", (evento) => {
+      const boton = evento.target.closest("button[data-pregunta]");
+      if (boton) enviarPregunta(boton.dataset.pregunta);
+    });
+  }
+  $("boton_salir_chat")?.addEventListener("click", cerrarSesion);
   actualizarContadorChat();
 }
 

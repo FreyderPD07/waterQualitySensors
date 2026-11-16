@@ -385,16 +385,22 @@ export async function responderPregunta(lectura, pregunta, contexto = {}) {
     }
 
     const datos = construirContexto(lectura, contexto.lecturas);
-    const contenido = await consultarModelo(
-        [
-            { role: 'system', content: PROMPT },
-            {
-                role: 'user',
-                content: `Pregunta del usuario: ${pregunta}\n${instruccionDeEstilo()}\nResponde en texto plano, sin JSON.\n\ncontexto_datos:\n${JSON.stringify(datos, null, 2)}`
-            }
-        ],
-        { temperature: 0.95, maxTokens: 420 }
-    );
+    const mensajes = [{ role: 'system', content: PROMPT }];
+
+    // Se envía el historial reciente para que la conversación tenga continuidad.
+    for (const item of (contexto.historial || []).slice(-8)) {
+        mensajes.push({
+            role: item.rol === 'ia' ? 'assistant' : 'user',
+            content: String(item.contenido).slice(0, 500)
+        });
+    }
+
+    mensajes.push({
+        role: 'user',
+        content: `Pregunta del usuario: ${pregunta}\n${instruccionDeEstilo()}\nResponde en texto plano, sin JSON. Sé preciso, profesional y organizado; evita textos largos.\n\ncontexto_datos:\n${JSON.stringify(datos, null, 2)}`
+    });
+
+    const contenido = await consultarModelo(mensajes, { temperature: 0.6, maxTokens: 320 });
 
     return contenido || responderConReglas(lectura, pregunta);
 }

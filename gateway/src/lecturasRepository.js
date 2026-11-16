@@ -1,5 +1,6 @@
 import { getDb } from './db.js';
 import { normalizarLectura } from './calidad.js';
+import { registrarPrediccion } from './prediccionesRepository.js';
 
 const COLECCION = 'lecturas';
 
@@ -27,6 +28,13 @@ export async function guardarLectura(lectura) {
 
         const resultado = await getDb().collection(COLECCION).insertOne(documento);
         console.log('Lectura guardada correctamente', resultado.insertedId);
+
+        // La predicción del modelo se guarda en su propia colección, separada del dato crudo.
+        const normalizada = normalizarLectura(documento);
+        if (normalizada) {
+            registrarPrediccion(normalizada).catch((error) =>
+                console.error('No se pudo guardar la predicción', error));
+        }
         return resultado.insertedId;
     } catch (error) {
         console.error('Error al guardar la lectura', error);

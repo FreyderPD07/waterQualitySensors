@@ -18,9 +18,12 @@ const CONFIG = {
     registro: "/auth/registro",           // POST {usuario, nombre, email, telefono, vereda, password}
     tanques: "/tanques",                  // GET  -> [{nodoId, nombre}]
     lecturas: "/lecturas",                // GET  ?nodoId=&desde=&hasta= -> [Lectura]
+    predicciones: "/predicciones",        // GET  ?nodoId=&desde=&hasta= -> [Prediccion ML]
     alertas: "/alertas",                  // GET  -> [Alerta]
-    chat: "/ia/chat",                     // POST {nodoId, pregunta} -> {respuesta}
-    reporteIA: "/ia/reporte"              // GET  ?nodoId= -> {explicacion, recomendaciones[]}
+    chat: "/ia/chat",                     // POST {nodoId, pregunta, historial[]} -> {respuesta}
+    reporteIA: "/ia/reporte",             // GET  ?nodoId= -> {explicacion, recomendaciones[]}
+    perfil: "/auth/perfil",               // GET/PUT -> datos del usuario en sesión
+    reportes: "/reportes"                 // POST {nodoId, variable, mensaje}; GET solo admin
   },
   minutosSinSenalParaDesconexion: 240     // Nodo "fuera de línea" si no hay paquetes en este tiempo
 };
@@ -46,6 +49,8 @@ const CLASES = { "Buena": "buena", "Aceptable": "aceptable", "Riesgo": "riesgo",
 // La sesión temporal permite navegar entre páginas sin dejar la cuenta abierta al cerrar la pestaña.
 const CLAVE_SESION = "WaterMLdetect-sesion";
 let sesion = recuperarSesion();
+// Solo el administrador puede exportar CSV y gestionar los reportes de la comunidad.
+const esAdmin = () => sesion?.rol === "admin";
 let tanques = [];
 let lecturas = [];
 let alertas = [];
@@ -165,7 +170,8 @@ async function cargarTanques() {
 
 // Obtiene las lecturas y las ordena cronológicamente para facilitar filtros, gráficas e historial.
 async function cargarLecturas() {
-  lecturas = CONFIG.usarDatosDemo ? generarLecturasDemo() : await llamarApi(CONFIG.endpoints.lecturas);
+  const consulta = CONFIG.usarDatosDemo ? "" : "?limite=10000";
+  lecturas = CONFIG.usarDatosDemo ? generarLecturasDemo() : await llamarApi(CONFIG.endpoints.lecturas + consulta);
   lecturas.sort((lecturaA, lecturaB) => new Date(lecturaA.fecha) - new Date(lecturaB.fecha));
 }
 
@@ -235,6 +241,8 @@ function mostrarVista(idVista) {
   document.querySelectorAll("#menu_principal button").forEach((boton) => boton.classList.toggle("activa", boton.dataset.vista === idVista));
   if (idVista === "vista_tendencias") actualizarTendencias();
   if (idVista === "vista_dashboard") dibujarGraficaPrincipal();
+  if (idVista === "vista_reportes" && esAdmin()) cargarReportes();
+  if (idVista === "vista_predicciones") actualizarPrediccionesML();
 }
 
 function entrarALaAplicacion() {
@@ -271,6 +279,19 @@ function actualizarDashboard() {
   dibujarGraficaPrincipal();
 }
 
+// Explica en una frase por qué el valor está fuera de rango o cerca del límite.
+function explicacionEstado(variable, valor, estado) {
+  if (estado === "ok") return "";
+  const c = UMBRALES[variable];
+  const fmt = (numero) => numero.toFixed(c.decimales);
+  if (estado === "fuera") {
+    if (c.min !== undefined && valor < c.min) return `Está por debajo del mínimo seguro (${c.min} ${c.unidad}).`;
+    return `Supera el máximo permitido (${c.max} ${c.unidad}).`;
+  }
+  if (c.max !== undefined && valor > c.max - c.margen) return `Se acerca al límite máximo (${fmt(c.max - c.margen)} – ${fmt(c.max)} ${c.unidad}).`;
+  return `Se acerca al límite mínimo (${fmt(c.min + c.margen)} – ${fmt(c.min)} ${c.unidad}).`;
+}
+
 // Construye las tarjetas de medición con su valor, unidad y estado respecto a los umbrales.
 function renderTarjetasMetricas(ultima) {
   $("tarjetas_metricas").innerHTML = VARIABLES.map((variable) => {
@@ -279,12 +300,18 @@ function renderTarjetasMetricas(ultima) {
     const estado = estadoParametro(variable, valor);
     const apoyo = variable === "temperatura" ? " (apoyo)" : "";
     const etiquetaEstado = { ok: "Normal", alerta: "Cerca del límite", fuera: "Fuera de rango" }[estado];
+    const explicacion = explicacionEstado(variable, valor, estado);
+    const botonReportar = estado !== "ok" && !esAdmin()
+      ? `<button type="button" class="enlace_reportar" data-variable="${variable}"><svg class="icono" aria-hidden="true"><use href="#i_alertas"/></svg>Reportar alteración</button>`
+      : "";
     return `<article class="tarjeta_metrica" data-estado="${estado}">
       <h3>${configuracionVariable.nombre}${apoyo}</h3>
       <output>${valor.toFixed(configuracionVariable.decimales)} <small>${configuracionVariable.unidad}</small></output>
       <meter min="${configuracionVariable.escala[0]}" max="${configuracionVariable.escala[1]}" low="${configuracionVariable.min ?? configuracionVariable.escala[0]}" high="${configuracionVariable.max}" optimum="${configuracionVariable.min !== undefined ? (configuracionVariable.min + configuracionVariable.max) / 2 : configuracionVariable.escala[0]}" value="${valor}"></meter>
-      <p class="estado_parametro">${etiquetaEstado}</p>
+      <p class="badge_estado" data-clase="${estado === "ok" ? "buena" : estado === "alerta" ? "riesgo" : "no_apta"}">${etiquetaEstado}</p>
+      ${explicacion ? `<p class="explicacion_estado">${explicacion}</p>` : ""}
       <small>${descripcionRango(configuracionVariable)}</small>
+      ${botonReportar}
     </article>`;
   }).join("");
 }
@@ -362,6 +389,81 @@ function actualizarTendencias() {
     <dt>Fuera de norma</dt><dd>${fueraDeRango}</dd>`;
 }
 
+// Carga las predicciones del modelo Random Forest para el periodo y nodo elegidos.
+// En modo real provienen de la colección "predicciones" del backend; en demo se derivan de las lecturas simuladas.
+async function cargarPredicciones({ horas, nodoId } = {}) {
+  const desde = new Date(Date.now() - horas * 3600000).toISOString();
+  if (CONFIG.usarDatosDemo) {
+    return lecturas
+      .filter((lectura) => (!nodoId || lectura.nodoId === nodoId) && new Date(lectura.fecha) >= new Date(desde))
+      .map((lectura) => ({
+        nodoId: lectura.nodoId,
+        fecha: lectura.fecha,
+        clase: lectura.clasificacion,
+        confianza: null,
+        modelo: "random_forest",
+        entradas: { ph: lectura.ph, turbidez: lectura.turbidez, conductividad: lectura.conductividad, temperatura: lectura.temperatura }
+      }));
+  }
+  const parametros = new URLSearchParams({ desde, limite: "5000" });
+  if (nodoId) parametros.set("nodoId", nodoId);
+  return llamarApi(`${CONFIG.endpoints.predicciones}?${parametros}`);
+}
+
+// Muestra solo la salida del modelo Random Forest filtrada por periodo y nodo:
+// la clase predicha más reciente por tanque y la distribución dentro del periodo.
+async function actualizarPrediccionesML() {
+  const contenedor = $("predicciones_ml");
+  if (!contenedor) return;
+  const horas = Number($("filtro_periodo_ml")?.value) || 168;
+  const nodoId = $("filtro_nodo_ml")?.value || "";
+  contenedor.innerHTML = `<p class="nota_vista">Consultando predicciones del modelo…</p>`;
+  try {
+    const predicciones = await cargarPredicciones({ horas, nodoId });
+    if (!predicciones.length) {
+      contenedor.innerHTML = `<p class="nota_vista">No hay predicciones registradas para el periodo seleccionado.</p>`;
+      return;
+    }
+    const ids = nodoId ? [nodoId] : [...new Set(predicciones.map((prediccion) => prediccion.nodoId))];
+    const clases = ["Buena", "Aceptable", "Riesgo", "No apta"];
+    contenedor.innerHTML = ids.map((id) => {
+      const delNodo = predicciones.filter((prediccion) => prediccion.nodoId === id);
+      const ultima = delNodo.at(-1);
+      if (!ultima) return "";
+      const total = Math.max(delNodo.length, 1);
+      const entradas = ultima.entradas || {};
+      const valores = entradas.ph !== undefined && entradas.ph !== null
+        ? `pH ${Number(entradas.ph).toFixed(1)} · Turbidez ${Number(entradas.turbidez).toFixed(1)} NTU · Conductividad ${Number(entradas.conductividad).toFixed(0)} µS/cm`
+        : "Entradas no disponibles";
+      const distribucion = clases.map((clase) => {
+        const cantidad = delNodo.filter((prediccion) => prediccion.clase === clase).length;
+        const porcentaje = Math.round((cantidad / total) * 100);
+        return `<div class="prediccion_barra">
+          <span>${clase}</span>
+          <span class="prediccion_pista"><span class="prediccion_relleno" data-clase="${CLASES[clase]}" style="width:${porcentaje}%"></span></span>
+          <span>${porcentaje}%</span>
+        </div>`;
+      }).join("");
+      const confianza = ultima.confianza !== null && ultima.confianza !== undefined
+        ? ` · confianza ${Math.round(ultima.confianza * 100)}%` : "";
+      return `<article class="panel prediccion_card">
+        <header class="prediccion_encabezado">
+          <h3>${nombreTanque(id)}</h3>
+          <span class="insignia" data-clase="${CLASES[ultima.clase] || "riesgo"}">${ultima.clase}</span>
+        </header>
+        <p class="prediccion_valores">${valores}</p>
+        <small>Modelo ${ultima.modelo || "random_forest"}${confianza} · ${formatearFecha(ultima.fecha)} · ${delNodo.length} predicciones en el periodo</small>
+        <div class="prediccion_distribucion">
+          <p class="prediccion_distribucion_titulo">Distribución en el periodo</p>
+          ${distribucion}
+        </div>
+      </article>`;
+    }).join("") || `<p class="nota_vista">No hay predicciones registradas para el periodo seleccionado.</p>`;
+  } catch (error) {
+    contenedor.innerHTML = `<p class="nota_vista mensaje_error">${error.message}</p>`;
+  }
+}
+
 /* ============================ LECTURAS ============================ */
 
 // Muestra el nivel de batería y la fecha de la última señal de cada tanque.
@@ -375,16 +477,32 @@ function renderEstadoNodos() {
   }).join("");
 }
 
-// Aplica los filtros de nodo y fechas y dibuja la tabla
+// Periodos rápidos del filtro de lecturas (en horas).
+const PERIODOS_LECTURAS = { "24h": 24, "7d": 168, "30d": 720, "365d": 8760 };
+
+// Aplica los filtros de periodo, nodo y fechas personalizadas, y dibuja la tabla.
 function filtrarLecturas(evento) {
   evento?.preventDefault();
-  const { nodo, desde, hasta } = Object.fromEntries(new FormData($("filtros_lecturas")));
-  if (desde && hasta && desde > hasta) return ($("error_filtros").value = "La fecha inicial no puede ser posterior a la final.");
+  const { nodo } = Object.fromEntries(new FormData($("filtros_lecturas")));
+  const periodo = $("filtro_periodo").value;
+
+  if (periodo === "personalizado") {
+    const desde = $("filtro_desde").value;
+    const hasta = $("filtro_hasta").value;
+    if (desde && hasta && desde > hasta) return ($("error_filtros").value = "La fecha inicial no puede ser posterior a la final.");
+    $("error_filtros").value = "";
+    const filtradas = lecturas.filter((lectura) =>
+      (!nodo || lectura.nodoId === nodo) &&
+      (!desde || new Date(lectura.fecha) >= new Date(desde + "T00:00:00")) &&
+      (!hasta || new Date(lectura.fecha) <= new Date(hasta + "T23:59:59")));
+    renderTablaLecturas(filtradas.reverse());
+    return;
+  }
+
   $("error_filtros").value = "";
+  const desdeMs = Date.now() - PERIODOS_LECTURAS[periodo] * 3600000;
   const filtradas = lecturas.filter((lectura) =>
-    (!nodo || lectura.nodoId === nodo) &&
-    (!desde || new Date(lectura.fecha) >= new Date(desde + "T00:00:00")) &&
-    (!hasta || new Date(lectura.fecha) <= new Date(hasta + "T23:59:59")));
+    (!nodo || lectura.nodoId === nodo) && new Date(lectura.fecha) >= desdeMs);
   renderTablaLecturas(filtradas.reverse());
 }
 
@@ -463,6 +581,265 @@ function actualizarContadorAlertas() {
   );
 }
 
+/* ============================ NOTIFICACIONES ============================ */
+
+// Alterna el panel desplegable de notificaciones bajo el botón de la campana.
+function alternarNotificaciones() {
+  const panel = $("panel_notificaciones");
+  if (!panel) return;
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) renderNotificaciones();
+}
+
+function cerrarNotificaciones() {
+  const panel = $("panel_notificaciones");
+  if (panel) panel.hidden = true;
+}
+
+// Dibuja las alertas más recientes dentro del panel desplegable.
+function renderNotificaciones() {
+  const lista = $("lista_notificaciones");
+  if (!lista) return;
+  const recientes = [...alertas]
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .slice(0, 8);
+
+  lista.innerHTML = recientes.map((a) => `
+    <li>
+      <button type="button" class="notificacion_item" data-id="${a.id}">
+        <span class="punto_severidad" data-severidad="${a.severidad}"></span>
+        <span class="notificacion_texto">
+          <strong>${a.titulo}</strong>
+          <small>${a.mensaje} · ${formatearFecha(a.fecha)}</small>
+        </span>
+      </button>
+    </li>`).join("") || `<li class="notificacion_vacia">No hay notificaciones por ahora.</li>`;
+}
+
+// Procesa el clic dentro del panel: abre la alerta en el dashboard o la marca como leída.
+function accionNotificacion(evento) {
+  const boton = evento.target.closest("button[data-id]");
+  if (!boton) return;
+  const alerta = alertas.find((a) => a.id === boton.dataset.id);
+  if (!alerta) return;
+  cerrarNotificaciones();
+  if (boton.dataset.accion !== "leer") {
+    alerta.leida = true;
+    renderAlertas();
+  }
+  if (boton.dataset.accion === "ver" || !boton.dataset.accion) {
+    $("selector_tanque").value = alerta.nodoId;
+    actualizarDashboard();
+    mostrarVista("vista_dashboard");
+  }
+}
+
+function marcarTodasLeidas() {
+  alertas.forEach((a) => { a.leida = true; });
+  renderAlertas();
+  renderNotificaciones();
+}
+
+/* ============================ REPORTES DE LA COMUNIDAD ============================ */
+
+const ETIQUETAS_REPORTE = { pendiente: "Pendiente", en_revision: "En revisión", resuelto: "Resuelto" };
+
+// Solo el administrador consulta los reportes enviados por los usuarios.
+async function cargarReportes() {
+  const lista = $("lista_reportes");
+  if (!lista) return;
+  try {
+    const reportes = await llamarApi(CONFIG.endpoints.reportes);
+    $("contador_reportes").textContent = reportes.filter((r) => r.estado !== "resuelto").length;
+    lista.innerHTML = reportes.map((r) => `
+      <article class="alerta reporte_item" data-estado="${r.estado}">
+        <header>
+          <h3>${UMBRALES[r.variable]?.nombre || r.variable || "Observación general"} · ${r.nodoId ? nombreTanque(r.nodoId) : "Todos los tanques"}</h3>
+          <p>${r.mensaje}</p>
+        </header>
+        <div>
+          <span class="insignia">${ETIQUETAS_REPORTE[r.estado] || r.estado}</span>
+          <small>${r.usuario}${r.email ? ` · ${r.email}` : ""}</small>
+          <time datetime="${r.creadoEn}">${formatearFecha(r.creadoEn)}</time>
+        </div>
+        <footer>
+          <label class="estado_reporte_label" for="estado_${r.id}">Estado</label>
+          <select class="estado_reporte" id="estado_${r.id}" data-id="${r.id}">
+            ${Object.entries(ETIQUETAS_REPORTE).map(([valor, texto]) => `<option value="${valor}" ${r.estado === valor ? "selected" : ""}>${texto}</option>`).join("")}
+          </select>
+        </footer>
+      </article>`).join("") || "<p>No hay reportes de la comunidad todavía.</p>";
+  } catch (error) {
+    lista.innerHTML = `<p>${error.message}</p>`;
+  }
+}
+
+// Cambia el estado de un reporte desde el selector de la vista de administración.
+async function cambiarEstadoReporte(evento) {
+  const selector = evento.target.closest(".estado_reporte");
+  if (!selector) return;
+  try {
+    await llamarApi(`${CONFIG.endpoints.reportes}/${selector.dataset.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ estado: selector.value })
+    });
+    cargarReportes();
+  } catch (error) {
+    alert(error.message || "No se pudo actualizar el reporte.");
+  }
+}
+
+/* ============================ REPORTAR ALTERACIÓN (USUARIO) ============================ */
+
+// Abre el modal para que el usuario envíe una nota al administrador sobre un parámetro alterado.
+function abrirReporte(variable) {
+  const modal = $("modal_reporte");
+  if (!modal) return;
+  const selector = $("reporte_variable");
+  if (!selector.options.length) {
+    selector.innerHTML = VARIABLES.map((v) => `<option value="${v}">${UMBRALES[v].nombre}</option>`).join("");
+  }
+  selector.value = variable;
+  $("reporte_mensaje").value = "";
+  $("error_reporte").value = "";
+  $("ok_reporte").value = "";
+  modal.hidden = false;
+  $("reporte_mensaje").focus();
+}
+
+function cerrarReporte() {
+  $("modal_reporte").hidden = true;
+}
+
+async function enviarReporte(evento) {
+  evento.preventDefault();
+  const mensaje = $("reporte_mensaje").value.trim();
+  if (mensaje.length < 5) return ($("error_reporte").value = "Describe brevemente lo que observaste (mínimo 5 caracteres).");
+  $("error_reporte").value = "";
+  try {
+    await llamarApi(CONFIG.endpoints.reportes, {
+      method: "POST",
+      body: JSON.stringify({
+        nodoId: nodoActual(),
+        variable: $("reporte_variable").value,
+        mensaje
+      })
+    });
+    $("ok_reporte").value = "Reporte enviado. El administrador lo revisará pronto.";
+    setTimeout(cerrarReporte, 1600);
+  } catch (error) {
+    $("error_reporte").value = error.message || "No se pudo enviar el reporte.";
+  }
+}
+
+/* ============================ ESTADO PÚBLICO (INDEX) ============================ */
+
+const CLASES_PUBLICAS = { Buena: "buena", Aceptable: "aceptable", Riesgo: "riesgo", "No apta": "no_apta" };
+let estadoPublicoActual = null;
+let graficaPublica = null;
+
+// Enlaces con data-destino apuntan al dashboard/chat si hay sesión, o al login si no.
+function aplicarDestinoEnlaces() {
+  const paginas = { dashboard: "dashboard.html", chat: "chat.html", perfil: "perfil.html" };
+  document.querySelectorAll("[data-destino]").forEach((enlace) => {
+    enlace.setAttribute("href", (sesion && paginas[enlace.dataset.destino]) || "login.html");
+  });
+}
+
+function resumenEstadoPublico(tanques) {
+  if (!tanques.length) return "Aún no hay tanques registrados en el sistema.";
+  const buenas = tanques.filter((t) => t.clasificacion === "Buena" || t.clasificacion === "Aceptable").length;
+  const conDatos = tanques.filter((t) => t.fecha).length;
+  return conDatos
+    ? `${buenas} de ${tanques.length} tanques en buen estado · ${conDatos} reportando datos.`
+    : "Los sensores aún no han enviado lecturas.";
+}
+
+// Tarjeta pública por tanque: clasificación de color y último valor de cada parámetro.
+function renderTarjetasPublicas(tanques) {
+  $("tarjetas_publicas").innerHTML = tanques.map((tanque) => {
+    const clase = CLASES_PUBLICAS[tanque.clasificacion] || "";
+    const parametros = VARIABLES.map((variable) => {
+      const valor = tanque[variable];
+      return `<div><dt>${UMBRALES[variable].nombre}</dt><dd>${valor === null || valor === undefined ? "—" : valor.toFixed(UMBRALES[variable].decimales)}</dd></div>`;
+    }).join("");
+    return `<article class="tarjeta_publica" data-clase="${clase}">
+      <header class="tarjeta_publica_encabezado">
+        <h3>${tanque.nombre}</h3>
+        <span class="badge_estado" data-clase="${clase}">${tanque.clasificacion}</span>
+      </header>
+      <dl class="datos_publicas">${parametros}</dl>
+      <small>Última lectura: ${tanque.fecha ? formatearFecha(tanque.fecha) : "sin datos"}</small>
+    </article>`;
+  }).join("") || `<article class="tarjeta_publica tarjeta_publica_cargando"><p>No hay tanques registrados.</p></article>`;
+}
+
+// Gráfica de tendencia general (promedio de todos los tanques) para la variable elegida.
+function dibujarGraficaPublica() {
+  const canvas = $("grafica_publica");
+  if (!canvas || typeof Chart === "undefined" || !estadoPublicoActual) return;
+  const variable = $("variable_publica")?.value || "ph";
+  const serie = estadoPublicoActual.tendencia?.[variable] || [];
+  const etiquetas = serie.map((punto) =>
+    new Date(punto.t).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit" }));
+
+  graficaPublica?.destroy();
+  graficaPublica = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: etiquetas,
+      datasets: [{
+        data: serie.map((punto) => punto.v),
+        borderColor: "#1d6fd1",
+        backgroundColor: "rgba(29,111,209,.1)",
+        fill: true,
+        tension: .3,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8, color: "#47617e" }, grid: { color: "rgba(13,58,102,.08)" } },
+        y: { ticks: { color: "#47617e" }, grid: { color: "rgba(13,58,102,.08)" } }
+      }
+    }
+  });
+}
+
+// Tilt 3D sutil que sigue el puntero en las tarjetas de la página de inicio.
+function iniciarTilt3D() {
+  document.querySelectorAll(".tarjeta_publica, .tarjeta_flotante").forEach((tarjeta) => {
+    tarjeta.addEventListener("pointermove", (evento) => {
+      const caja = tarjeta.getBoundingClientRect();
+      const x = (evento.clientX - caja.left) / caja.width - 0.5;
+      const y = (evento.clientY - caja.top) / caja.height - 0.5;
+      tarjeta.style.transform = `perspective(800px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateY(-4px)`;
+    });
+    tarjeta.addEventListener("pointerleave", () => { tarjeta.style.transform = ""; });
+  });
+}
+
+// Carga el estado público del agua para la página de inicio (no requiere sesión).
+async function iniciarEstadoPublico() {
+  const contenedor = $("tarjetas_publicas");
+  if (!contenedor) return;
+  try {
+    const respuesta = await fetch(`${CONFIG.apiBase}/publico/estado`);
+    if (!respuesta.ok) throw new Error("Sin datos");
+    estadoPublicoActual = await respuesta.json();
+    renderTarjetasPublicas(estadoPublicoActual.tanques || []);
+    dibujarGraficaPublica();
+    $("estado_publico_resumen").textContent = resumenEstadoPublico(estadoPublicoActual.tanques || []);
+    $("variable_publica")?.addEventListener("change", dibujarGraficaPublica);
+    iniciarTilt3D();
+  } catch {
+    contenedor.innerHTML = `<article class="tarjeta_publica tarjeta_publica_cargando"><p>No se pudo consultar el estado del agua. Intenta de nuevo más tarde.</p></article>`;
+    $("estado_publico_resumen").textContent = "Servicio no disponible";
+  }
+}
+
 /* ============================ INICIO ============================ */
 
 // Rellena los selectores de tanque y medición con las opciones disponibles.
@@ -470,6 +847,7 @@ function llenarSelectores() {
   const opcionesNodos = tanques.map((tanque) => `<option value="${tanque.nodoId}">${tanque.nombre}</option>`).join("");
   $("selector_tanque").innerHTML = opcionesNodos;
   $("filtro_nodo").innerHTML = `<option value="">Todos los nodos</option>${opcionesNodos}`;
+  $("filtro_nodo_ml") && ($("filtro_nodo_ml").innerHTML = `<option value="">Todos los nodos</option>${opcionesNodos}`);
   const opcionesVariables = VARIABLES.map((variable) => `<option value="${variable}">${UMBRALES[variable].nombre}</option>`).join("");
   $("variable_grafica_principal").innerHTML = opcionesVariables;
   $("variable_tendencia").innerHTML = opcionesVariables;
@@ -501,31 +879,68 @@ async function iniciarAplicacion() {
 
 // Asocia los controles del dashboard con sus funciones de navegación y filtros.
 function conectarEventos() {
-  if (!$("aplicacion")) {
-    if (sesion) window.location.replace("dashboard.html");
-    return;
-  }
+  if (!$("aplicacion")) return;
   if (!sesion) {
     window.location.replace("login.html");
     return;
   }
   $("nombre_usuario").textContent = sesion.nombre;
+  $("nombre_usuario_perfil")?.setAttribute("title", sesion.email || "");
+
+  // Restricciones por rol: el comunero no exporta CSV ni gestiona reportes.
+  if (esAdmin()) {
+    if ($("menu_reportes")) $("menu_reportes").hidden = false;
+  } else {
+    if ($("boton_exportar")) $("boton_exportar").hidden = true;
+    if ($("menu_reportes")) $("menu_reportes").hidden = true;
+  }
+
   $("boton_cerrar_sesion").addEventListener("click", cerrarSesion);
   $("menu_principal").addEventListener("click", (evento) => evento.target.closest("button") && mostrarVista(evento.target.closest("button").dataset.vista));
-  $("boton_notificaciones").addEventListener("click", () => mostrarVista("vista_alertas"));
+  $("boton_notificaciones")?.addEventListener("click", (evento) => { evento.stopPropagation(); alternarNotificaciones(); });
+  $("lista_notificaciones")?.addEventListener("click", accionNotificacion);
+  $("boton_marcar_todas")?.addEventListener("click", marcarTodasLeidas);
+  $("ver_todas_notificaciones")?.addEventListener("click", cerrarNotificaciones);
+  document.addEventListener("click", (evento) => {
+    if (!evento.target.closest(".notificaciones")) cerrarNotificaciones();
+  });
+  document.addEventListener("keydown", (evento) => { if (evento.key === "Escape") cerrarNotificaciones(); });
+
   $("selector_tanque").addEventListener("change", () => { actualizarDashboard(); actualizarTendencias(); });
   $("variable_grafica_principal").addEventListener("change", dibujarGraficaPrincipal);
+  $("filtro_periodo")?.addEventListener("change", () => {
+    $("grupo_fechas").hidden = $("filtro_periodo").value !== "personalizado";
+    filtrarLecturas();
+  });
   $("filtros_lecturas").addEventListener("submit", filtrarLecturas);
-  $("boton_exportar").addEventListener("click", exportarCSV);
+  $("boton_exportar")?.addEventListener("click", exportarCSV);
   $("filtros_alertas").addEventListener("click", (evento) => evento.target.dataset.severidad && filtrarAlertas(evento.target.dataset.severidad));
   $("lista_alertas").addEventListener("click", accionAlerta);
+  $("lista_reportes")?.addEventListener("change", cambiarEstadoReporte);
+  $("tarjetas_metricas")?.addEventListener("click", (evento) => {
+    const boton = evento.target.closest(".enlace_reportar");
+    if (boton) abrirReporte(boton.dataset.variable);
+  });
+  $("modal_reporte_cerrar")?.addEventListener("click", cerrarReporte);
+  $("modal_reporte")?.addEventListener("click", (evento) => { if (evento.target === evento.currentTarget) cerrarReporte(); });
+  $("form_reporte")?.addEventListener("submit", enviarReporte);
   $("boton_menu").addEventListener("click", () => document.querySelector(".barra_lateral").classList.toggle("abierta"));
   $("filtros_tendencias").addEventListener("submit", (evento) => { evento.preventDefault(); actualizarTendencias(); });
+  $("filtros_predicciones")?.addEventListener("submit", (evento) => { evento.preventDefault(); actualizarPrediccionesML(); });
   iniciarAplicacion();
 }
 
+// Arranque según la página: dashboard requiere sesión, login/registro redirigen si ya hay sesión,
+// chat y perfil requieren sesión, e index muestra el estado público del agua.
+const paginaActual = () => location.pathname.split("/").pop() || "index.html";
+
 if ($("aplicacion")) {
   conectarEventos();
-} else if (sesion) {
+} else if (["login.html", "registro.html"].includes(paginaActual()) && sesion) {
   window.location.replace("dashboard.html");
+} else if (["chat.html", "perfil.html"].includes(paginaActual()) && !sesion) {
+  window.location.replace("login.html");
+} else if (paginaActual() === "index.html") {
+  aplicarDestinoEnlaces();
+  iniciarEstadoPublico();
 }

@@ -1,6 +1,7 @@
 import './env.js';
 import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
+import { ObjectId } from 'mongodb';
 import { getDb } from './db.js';
 
 const scrypt = promisify(scryptCallback);
@@ -9,6 +10,19 @@ if (!TOKEN_SECRET || TOKEN_SECRET.length < 32) {
     throw new Error('TOKEN_SECRET debe estar configurado y tener al menos 32 caracteres en gateway/.env');
 }
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+// El correo definido en ADMIN_EMAIL siempre tiene rol administrador.
+export function rolDe(usuario) {
+    if (!usuario) return 'comunero';
+    if (ADMIN_EMAIL && String(usuario.email || '').toLowerCase() === ADMIN_EMAIL) return 'admin';
+    return usuario.rol === 'admin' ? 'admin' : 'comunero';
+}
+
+// MongoDB guarda _id como ObjectId; en modo demo son cadenas de texto.
+export function filtroIdDocumento(id) {
+    return /^[0-9a-f]{24}$/i.test(String(id)) ? { _id: new ObjectId(String(id)) } : { _id: String(id) };
+}
 
 const correoValido = (correo) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo);
 const usuarioValido = (usuario) => /^[a-zA-Z0-9]{1,50}$/.test(usuario);
@@ -23,7 +37,8 @@ export function firmarToken(usuario) {
     const payload = Buffer.from(JSON.stringify({
         sub: String(usuario._id),
         nombre: usuario.nombre,
-        rol: usuario.rol || 'comunero',
+        email: usuario.email,
+        rol: rolDe(usuario),
         exp: Date.now() + TOKEN_TTL_MS
     })).toString('base64url');
 
@@ -91,7 +106,7 @@ function usuarioPublico(documento) {
         email: documento.email,
         telefono: documento.telefono,
         vereda: documento.vereda,
-        rol: documento.rol || 'comunero'
+        rol: rolDe(documento)
     };
 }
 
@@ -107,6 +122,15 @@ export async function requireAuth(request, reply) {
     request.usuario = datos;
 }
 
+// Solo el administrador puede exportar datos, gestionar reportes y ver el detalle completo.
+export async function requireAdmin(request, reply) {
+    await requireAuth(request, reply);
+    if (reply.sent) return;
+    if (request.usuario?.rol !== 'admin') {
+        return reply.code(403).send({ status: 'error', message: 'Esta función requiere rol de administrador.' });
+    }
+}
+
 export async function prepararIndices() {
     if (process.env.DEMO_MODE === 'true') return;
 
@@ -115,6 +139,7 @@ export async function prepararIndices() {
         await db.collection('usuarios').createIndex({ email: 1 }, { unique: true });
         await db.collection('usuarios').createIndex({ usuario: 1 }, { unique: true });
         await db.collection('lecturas').createIndex({ sensorId: 1, recibidoEn: 1 });
+        await db.collection('reportes').createIndex({ creadoEn: -1 });
     } catch (error) {
         console.warn('No se pudieron crear los índices de MongoDB:', error.message);
     }
@@ -212,6 +237,68 @@ export async function authRoutes(fastify) {
         return {
             token: firmarToken(usuario),
             usuario: usuarioPublico(usuario)
+        };
+    });
+
+    // Busca el documento completo del usuario autenticado (necesario para editar el perfil).
+    const buscarUsuarioPorId = async (id) => {
+        if (demoMode) {
+            return [...usuariosDemo.values()].find((item) => String(item._id) === String(id)) || null;
+        }
+        return usuarios().findOne(filtroIdDocumento(id));
+    };
+
+    fastify.get('/api/auth/perfil', { preHandler: requireAuth }, async (request, reply) => {
+        const documento = await buscarUsuarioPorId(request.usuario.sub);
+        if (!documento) return reply.code(404).send({ status: 'error', message: 'Usuario no encontrado.' });
+        return { usuario: usuarioPublico(documento) };
+    });
+
+    fastify.put('/api/auth/perfil', { preHandler: requireAuth }, async (request, reply) => {
+        const { nombre, telefono, vereda, password, passwordActual } = request.body || {};
+
+        for (const [campo, valor, maximo] of [['nombre', nombre, 80], ['telefono', telefono, 15], ['vereda', vereda, 80]]) {
+            if (typeof valor !== 'string' || !valor.trim() || valor.trim().length > maximo) {
+                return reply.code(400).send({ status: 'error', message: `El campo ${campo} es obligatorio y no puede superar ${maximo} caracteres.` });
+            }
+        }
+        if (!telefonoValido(telefono.trim())) {
+            return reply.code(400).send({ status: 'error', message: 'El teléfono debe tener entre 10 y 15 dígitos.' });
+        }
+
+        const documento = await buscarUsuarioPorId(request.usuario.sub);
+        if (!documento) return reply.code(404).send({ status: 'error', message: 'Usuario no encontrado.' });
+
+        const cambios = {
+            nombre: nombre.trim(),
+            telefono: telefono.trim(),
+            vereda: vereda.trim()
+        };
+
+        // El cambio de contraseña es opcional; si se envía, exige la actual y valida la nueva.
+        if (password !== undefined && password !== null && password !== '') {
+            if (typeof password !== 'string' || !claveValida(password)) {
+                return reply.code(400).send({ status: 'error', message: 'La nueva contraseña debe tener de 8 a 12 caracteres, con mayúscula, número y símbolo.' });
+            }
+            const claveCorrecta = await verificarClave(String(passwordActual || ''), documento.passwordSalt, documento.passwordHash);
+            if (!claveCorrecta) {
+                return reply.code(403).send({ status: 'error', message: 'La contraseña actual no es correcta.' });
+            }
+            const { salt, hash } = await crearHashClave(password);
+            cambios.passwordSalt = salt;
+            cambios.passwordHash = hash;
+        }
+
+        if (demoMode) {
+            Object.assign(documento, cambios);
+        } else {
+            await usuarios().updateOne(filtroIdDocumento(request.usuario.sub), { $set: cambios });
+            Object.assign(documento, cambios);
+        }
+
+        return {
+            token: firmarToken(documento),
+            usuario: usuarioPublico(documento)
         };
     });
 }

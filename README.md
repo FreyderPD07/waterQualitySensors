@@ -1,22 +1,144 @@
-# 💧 Water Quality Sensors — Sistema de Monitoreo de Calidad del Agua
+# WaterMLdetect — Monitoreo de Calidad del Agua
 
-Sistema de telemetría de baja potencia basado en **LoRaWAN** para el monitoreo en tiempo real de parámetros críticos del agua. Captura datos desde sensores sumergibles, los transmite de forma inalámbrica, los almacena en una base de datos NoSQL y los representa visualmente en un dashboard interactivo.
+Sistema web de monitoreo de calidad del agua para comunidades. Recibe lecturas de sensores fisicoquímicos (pH, turbidez, conductividad y temperatura), las clasifica con un modelo predictivo, genera alertas y las presenta en un dashboard público y autenticado, junto con un asistente de IA (HelioWater) para interpretar los datos.
+
+Desarrollado con **Helio Mind Labs** y un equipo de investigadores.
 
 ---
 
-## Descripción General
+## Tabla de contenido
 
-El sistema está diseñado para cubrir tres responsabilidades principales:
+1. [Características](#características)
+2. [Arquitectura](#arquitectura)
+3. [Estructura del proyecto](#estructura-del-proyecto)
+4. [Ejecución rápida](#ejecución-rápida)
+5. [Modo demo](#modo-demo)
+6. [Configuración (variables de entorno)](#configuración-variables-de-entorno)
+7. [Roles y permisos](#roles-y-permisos)
+8. [API REST](#api-rest)
+9. [Base de datos](#base-de-datos)
+10. [Asistente IA](#asistente-ia)
+11. [Pruebas](#pruebas)
+12. [Parámetros monitoreados](#parámetros-monitoreados)
+13. [Notas](#notas)
 
-1. **Captura de datos** — recibe lecturas desde sensores físicos vía red LoRaWAN.
-2. **Persistencia y organización** — almacena y gestiona la información en una base de datos NoSQL.
-3. **Representación gráfica** — presenta los datos procesados en un dashboard con alertas y tendencias.
+---
+
+## Características
+
+- **Página pública** (`index.html`): estado actual del agua por tanque, gráfica de tendencia de 7 días y resumen general, sin necesidad de iniciar sesión ni exportar datos.
+- **Dashboard autenticado** (`dashboard.html`): métricas en tiempo real, gráficas de 24 h y tendencias, centro de alertas, historial de lecturas con filtros por periodo (24 h, 7 días, 30 días, 1 año o rango personalizado), estado de la red LoRaWAN y reportes de la comunidad.
+- **Predicciones ML**: vista dedicada con la salida del modelo Random Forest — clase predicha por tanque, distribución por periodo y filtros por fecha y nodo.
+- **Asistente IA HelioWater** (`chat.html`): chat de pantalla completa para todos los usuarios autenticados, con historial de conversación y respuestas breves y precisas.
+- **Gestión de usuarios**: registro, inicio de sesión, edición de perfil y cambio de contraseña.
+- **Reportes de alteraciones**: cualquier usuario puede avisar al administrador cuando un parámetro se sale de rango; el administrador los gestiona y cambia su estado.
+- **Exportación CSV**: disponible únicamente para el rol administrador.
+- **Diseño responsive** y accesible, con iconografía SVG propia y estados visuales verde/amarillo/rojo según la calidad del agua.
+
+---
+
+## Arquitectura
+
+El sistema sigue una arquitectura cliente-servidor simple: un **gateway Node.js (Fastify)** sirve el frontend estático y expone la API REST en el mismo origen. La adquisición de datos llega por **MQTT** (The Things Network / ChirpStack) o por la ruta HTTP `/api/sensor/registrar`, y se persiste en **MongoDB**.
+
+```mermaid
+flowchart LR
+    subgraph SENSORES["Adquisición IoT"]
+        S1["Sensores LoRaWAN\n(pH · turbidez · conductividad · temp.)"]
+        TTN["The Things Network / ChirpStack"]
+    end
+
+    subgraph GATEWAY["Gateway — Node.js + Fastify"]
+        MQTT["Cliente MQTT\n(src/mqtt.js)"]
+        API["API REST\n(src/api.js)
+        Autenticación JWT
+        Clasificación de calidad
+        Reportes y predicciones"]
+        IA["Asistente IA\n(src/ia.js)
+        OpenRouter + fallback local"]
+    end
+
+    subgraph DATOS["Persistencia — MongoDB"]
+        LEC[("lecturas\nDatos crudos del sensor")]
+        PRED[("predicciones\nSalida del modelo ML")]
+        USR[("usuarios · tanques · reportes")]
+    end
+
+    subgraph CLIENTE["Frontend estático"]
+        PUB["Página pública\nindex.html"]
+        APP["Dashboard · Chat · Perfil\ndashboard.html · chat.html · perfil.html"]
+    end
+
+    S1 -->|LoRaWAN| TTN
+    TTN -->|MQTT| MQTT
+    MQTT --> API
+    API --> LEC
+    API --> PRED
+    API --> USR
+    API --> IA
+    CLIENTE -->|HTTP + JWT| API
+```
+
+**Decisiones clave:**
+
+| Decisión | Motivo |
+|---|---|
+| Gateway único (API + estáticos) | Un solo proceso y un solo puerto simplifican despliegue y desarrollo |
+| Colección `predicciones` separada de `lecturas` | Los datos crudos del sensor nunca se mezclan con la salida del modelo; cada predicción guarda sus entradas para auditoría |
+| Clasificación en el backend | El umbral/Random Forest se aplica al guardar, así todos los clientes ven el mismo resultado |
+| JWT en `sessionStorage` | Sesión que no persiste al cerrar la pestaña del navegador |
+
+---
+
+## Estructura del proyecto
+
+```
+monitoreoCalidadDeAgua/
+│
+├── frontend/                     # Sitio web estático (HTML + CSS + JS, sin framework)
+│   ├── index.html                # Página pública: estado del agua y tendencias
+│   ├── login.html                # Inicio de sesión
+│   ├── registro.html             # Creación de cuenta
+│   ├── dashboard.html            # Panel autenticado (métricas, alertas, ML, reportes)
+│   ├── chat.html                 # Chat de pantalla completa con HelioWater
+│   ├── perfil.html               # Edición de perfil y contraseña
+│   ├── app/
+│   │   ├── index.js              # Lógica principal: sesión, dashboard, filtros, reportes, predicciones
+│   │   ├── chat.js               # Chat con la IA (flotante y página completa)
+│   │   ├── perfil.js             # Formulario de perfil
+│   │   └── grafica.js            # Gráficas Chart.js del dashboard
+│   ├── styles/styles.css         # Sistema de diseño completo (tema claro profesional)
+│   └── vendor/chart.umd.js       # Chart.js servido localmente (sin CDN)
+│
+├── gateway/                      # Backend Node.js + Fastify
+│   ├── src/
+│   │   ├── index.js              # Arranque del servidor y registro de rutas
+│   │   ├── api.js                # Rutas REST: tanques, lecturas, predicciones, alertas, IA
+│   │   ├── auth.js               # Registro, login JWT, roles (admin/comunero), perfil
+│   │   ├── calidad.js            # Umbrales y clasificación de calidad del agua
+│   │   ├── lecturasRepository.js # Persistencia de lecturas crudas en MongoDB
+│   │   ├── prediccionesRepository.js # Colección "predicciones" del modelo ML
+│   │   ├── reportes.js           # Reportes de alteraciones enviados por usuarios
+│   │   ├── db.js                 # Conexión a MongoDB
+│   │   ├── mqtt.js               # Suscripción al broker MQTT (TTN)
+│   │   ├── ttnSensor.js          # Ruta HTTP de registro directo del sensor
+│   │   ├── simulador.js          # Datos demo generados cuando DEMO_MODE=true
+│   │   ├── ia.js                 # Integración con OpenRouter y fallback local
+│   │   └── env.js                # Carga de variables de entorno
+│   ├── prompts/
+│   │   └── asistente_agua.md     # Prompt del sistema de HelioWater
+│   ├── test/                     # Pruebas con node:test
+│   ├── .env / .env.example       # Configuración (el .env está ignorado por Git)
+│   └── package.json
+│
+└── README.md
+```
 
 ---
 
 ## Ejecución rápida
 
-El gateway sirve el frontend y la API en el mismo puerto (`http://localhost:4000`). Solo necesitas un comando:
+El gateway sirve el frontend y la API en el mismo puerto (`http://localhost:4000`).
 
 ```bash
 cd gateway
@@ -24,217 +146,156 @@ npm install   # solo la primera vez
 npm run dev   # modo watch: recarga solo al guardar cambios
 ```
 
-Luego abre `http://localhost:4000` en el navegador.
+Abre `http://localhost:4000` en el navegador.
 
-**Modo demo** (sin MongoDB, MQTT ni sensores — ya configurado en `gateway/.env`):
-
-- Login admin: `demo@watermldetect.com` / `Agua2026!`
-- Para crear un usuario comunero usa **Crear mi cuenta** en el login.
-
-**Otros comandos:**
+**Otros comandos** (desde `gateway/`):
 
 ```bash
-npm start        # producción (sin watch), desde gateway/
-npm test         # pruebas del gateway, desde gateway/
+npm start   # producción, sin watch
+npm test    # pruebas del gateway
 ```
+
+> Si el puerto 4000 está ocupado por un proceso anterior, libéralo con:
+> `Get-NetTCPConnection -LocalPort 4000 -State Listen | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }`
 
 ---
 
-## Arquitectura del Sistema
+## Modo demo
 
-Se aplica una **Arquitectura en Capas (Layered Architecture)** con el patrón **MVC** en la capa de presentación. Este enfoque permite separar claramente las responsabilidades, facilitar el mantenimiento y escalar cada capa de forma independiente.
+Con `DEMO_MODE=true` en `gateway/.env` el sistema funciona **sin MongoDB, MQTT ni sensores**: genera dos tanques y una semana de lecturas simuladas en cada consulta, sin persistir nada.
 
-```mermaid
-flowchart TB
-    subgraph PRESENTACION["Capa de Presentación"]
-        direction LR
-        P1["Views\nDashboard · Gráficas · Reportes"]
-        P2["Controllers\nHTTP · WebSocket"]
-    end
+- Login admin: `demo@watermldetect.com` / `Agua2026!`
+- El modo queda marcado como `simulacion` en `GET /api/health`.
+- Para crear un usuario comunero usa **Crear mi cuenta** en el login.
 
-    subgraph NEGOCIO["Capa de Negocio — Services"]
-        direction LR
-        N1["Procesamiento\nde lecturas"]
-        N2["Motor de alertas\ny umbrales"]
-        N3["Análisis\nde tendencias"]
-    end
+---
 
-    subgraph DATOS["Capa de Datos — Repositories"]
-        direction LR
-        D1["Modelos\nSensores · Lecturas · Alertas"]
-        D2["Acceso NoSQL\nMongoDB / InfluxDB"]
-    end
+## Configuración (variables de entorno)
 
-    subgraph ADQUISICION["Capa de Adquisición — IoT Gateway"]
-        direction LR
-        A1["Recepción\npaquetes LoRaWAN"]
-        A2["Validación y\nnormalización de tramas"]
-        A3["Publicación interna\nMQTT · HTTP"]
-    end
+Archivo: `gateway/.env` (nunca se sube a Git; ver `.env.example`).
 
-    PRESENTACION -->|consulta servicios| NEGOCIO
-    NEGOCIO      -->|lee y escribe| DATOS
-    DATOS        -->|consume datos normalizados| ADQUISICION
-
-    style PRESENTACION fill:#1e3a5f,stroke:#4a90d9,stroke-width:2px,color:#ffffff
-    style NEGOCIO      fill:#1a3a2a,stroke:#4caf50,stroke-width:2px,color:#ffffff
-    style DATOS        fill:#3a2a1a,stroke:#ff9800,stroke-width:2px,color:#ffffff
-    style ADQUISICION  fill:#3a1a2a,stroke:#e91e8c,stroke-width:2px,color:#ffffff
-```
-
-### ¿Por qué esta arquitectura?
-
-| Criterio | Decisión |
+| Variable | Descripción |
 |---|---|
-| Separación de responsabilidades | Cada capa tiene un rol único y no se mezclan con las demás |
-| Escalabilidad | Cada capa puede crecer o reemplazarse sin romper las otras |
-| IoT + Web en el mismo sistema | La capa de adquisición desacopla el hardware del resto del software |
-| Representación gráfica | MVC en presentación mantiene limpio el manejo de vistas y datos |
+| `DEMO_MODE` | `true` = simulación sin MongoDB/MQTT |
+| `MONGO_URL` / `MONGO_URI` | Cadena de conexión a MongoDB (modo real) |
+| `MONGO_DB` | Nombre de la base de datos (por defecto `Monitoreo_Agua`) |
+| `MQTT_URL`, `MQTT_USERNAME`, `MQTT_PASSWORD` | Conexión al broker MQTT |
+| `TTN_TOPIC` | Tópico de The Things Network al que suscribirse |
+| `TOKEN_SECRET` | Secreto para firmar los JWT (mínimo 32 caracteres) |
+| `TOKEN_TTL` | Duración del token |
+| `ADMIN_EMAIL` | Correo que recibe automáticamente el rol **admin** al iniciar sesión |
+| `OPENROUTER_API_KEY` | Clave de OpenRouter para el asistente IA |
+| `OPENROUTER_MODEL` | Modelo principal (por defecto `google/gemini-3.5-flash-lite`) |
+| `OPENROUTER_FALLBACK_MODELS` | Modelos alternativos si el principal falla |
+| `LLM_URL` | Servidor compatible con OpenAI opcional |
 
 ---
 
-## Estructura de Carpetas
+## Roles y permisos
 
-```
-waterQualitySensors/
-│
-├── acquisition/              # Capa de adquisición (IoT Gateway)
-│   ├── lorawan_listener.js   # Escucha y recibe paquetes LoRaWAN
-│   ├── payload_parser.js     # Decodifica y valida las tramas de los sensores
-│   └── mqtt_publisher.js     # Publica los datos normalizados internamente
-│
-├── data/                     # Capa de datos
-│   ├── models/               # Definición de esquemas (sensores, lecturas, alertas)
-│   └── repositories/         # Acceso y consultas a la base de datos NoSQL
-│
-├── services/                 # Capa de negocio
-│   ├── reading_service.js    # Lógica de procesamiento de lecturas
-│   ├── alert_service.js      # Evaluación de umbrales y generación de alertas
-│   └── trend_service.js      # Cálculo de tendencias y estadísticas
-│
-├── presentation/             # Capa de presentación (MVC)
-│   ├── controllers/          # Controladores HTTP / WebSocket
-│   ├── views/                # Plantillas o componentes del dashboard
-│   └── routes/               # Definición de rutas de la API y UI
-│
-├── config/                   # Configuración del sistema (DB, red, umbrales)
-├── tests/                    # Pruebas unitarias e integración
-└── README.md
-```
-
----
-
-## Parámetros Monitoreados
-
-Los sensores sumergibles capturan los siguientes parámetros:
-
-| Parámetro | Unidad | Descripción |
+| Acción | Admin | Comunero |
 |---|---|---|
-| pH | — | Nivel de acidez o alcalinidad del agua |
-| Turbidez | NTU | Claridad del agua |
-| Temperatura | °C | Temperatura del cuerpo de agua |
-| Conductividad | µS/cm | Concentración de sales disueltas |
-| Oxígeno Disuelto | mg/L | Nivel de oxígeno disponible en el agua |
+| Ver dashboard, gráficas y alertas | ✔ | ✔ |
+| Ver predicciones ML | ✔ | ✔ |
+| Usar el asistente IA | ✔ | ✔ |
+| Editar perfil y contraseña | ✔ | ✔ |
+| Reportar alteración del agua | ✔ | ✔ |
+| Exportar lecturas a CSV | ✔ | — |
+| Gestionar reportes de la comunidad | ✔ | — |
+
+El rol se asigna por el correo configurado en `ADMIN_EMAIL`; el resto de usuarios registran rol `comunero`.
 
 ---
 
-## Flujo de Datos
+## API REST
 
-```mermaid
-flowchart TD
-    S1["Sensor pH"]
-    S2["Sensor Turbidez"]
-    S3["Sensor Temperatura"]
-    S4["Sensor Conductividad"]
-    S5["Sensor O₂ Disuelto"]
+Base: `http://localhost:4000/api`. Todas las rutas privadas requieren `Authorization: Bearer <token>`.
 
-    GW["Gateway LoRaWAN"]
-    NORM["Normalización de Tramas"]
-    DB[("Base de Datos NoSQL")]
-    SVC["Servicios\n(alertas · análisis · tendencias)"]
-    API["API REST / WebSocket"]
-    DASH["Dashboard\n(gráficas en tiempo real)"]
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/health` | Estado del servicio, modo y proveedor de IA |
+| GET | `/publico/estado` | Estado por tanque + tendencia de 7 días (público, sin exportación) |
+| POST | `/auth/registro` | Crear cuenta comunero |
+| POST | `/auth/login` | Iniciar sesión → `{token, usuario}` |
+| GET | `/auth/perfil` | Datos del usuario en sesión |
+| PUT | `/auth/perfil` | Editar nombre, teléfono, vereda y contraseña |
+| GET | `/tanques` | Lista de tanques/nodos monitoreados |
+| GET | `/lecturas?nodoId&desde&hasta&limite` | Lecturas crudas de sensores |
+| GET | `/predicciones?nodoId&desde&hasta&limite` | Predicciones del modelo ML (colección separada) |
+| GET | `/alertas` | Alertas generadas en los últimos 7 días |
+| GET | `/ia/reporte?nodoId` | Explicación y recomendaciones de la última lectura |
+| POST | `/ia/chat` | Chat con HelioWater `{nodoId, pregunta, historial[]}` |
+| POST | `/reportes` | Enviar reporte de alteración (cualquier usuario) |
+| GET | `/reportes` | Listar reportes (solo admin) |
+| PATCH | `/reportes/:id` | Cambiar estado de un reporte (solo admin) |
+| POST | `/registrar` | Registro directo de lecturas desde el sensor HTTP (modo real) |
+| GET | `/mapa` | Última lectura recibida por MQTT |
 
-    S1 & S2 & S3 & S4 & S5 -->|LoRaWAN| GW
-    GW --> NORM
-    NORM --> DB
-    DB --> SVC
-    DB --> API
-    SVC --> API
-    API --> DASH
+---
+
+## Base de datos
+
+MongoDB (`MONGO_DB`, por defecto `Monitoreo_Agua`):
+
+| Colección | Contenido |
+|---|---|
+| `usuarios` | Cuentas registradas (contraseñas con hash) |
+| `tanques` | Nodos de monitoreo y sus nombres |
+| `lecturas` | Datos crudos del sensor: `sensorId`, `recibidoEn`, `datos{}`, RSSI/SNR/batería |
+| `predicciones` | Salida del modelo: `nodoId`, `fecha`, `clase`, `confianza`, `modelo`, `entradas{}` |
+| `reportes` | Avisos de alteración enviados por usuarios a administradores |
+
+Cada lectura nueva que entra por MQTT o por `/sensor/registrar` genera automáticamente un documento en `predicciones` con la clase resultante y las entradas que la produjeron.
+
+---
+
+## Asistente IA
+
+HelioWater responde preguntas sobre la calidad del agua usando el prompt de `gateway/prompts/asistente_agua.md` y el contexto de las últimas 24 h de lecturas.
+
+1. Crea una clave en <https://openrouter.ai/keys>.
+2. Configura `OPENROUTER_API_KEY` y `OPENROUTER_MODEL` en `gateway/.env`.
+3. Si OpenRouter falla o no hay clave, el asistente usa un análisis local por reglas, sin interrumpir el servicio.
+
+El modelo principal consume crédito de OpenRouter (fracciones de centavo por respuesta). La clave vive solo en `gateway/.env`, que Git ignora.
+
+---
+
+## Pruebas
+
+```bash
+cd gateway
+npm test
 ```
 
----
-
-## Tecnologías (propuestas)
-
-| Componente | Tecnología sugerida |
-|---|---|
-| Gateway LoRaWAN | The Things Network (TTN) / ChirpStack |
-| Backend | Node.js / Python (FastAPI) |
-| Base de datos | MongoDB o InfluxDB (series de tiempo) |
-| Mensajería interna | MQTT (Mosquitto) |
-| Dashboard | Grafana / React + Chart.js |
-| API | REST + WebSocket |
+Las pruebas cubren la entrega del frontend, la salud de la API, la autenticación, la normalización de lecturas TTN, el chat y el reporte de IA — todo sin necesitar MongoDB.
 
 ---
 
-## Estado del Proyecto
-### 1 cuando ya se esta trabajando, 0 cuando no se a  implementado
+## Parámetros monitoreados
 
-- [1] Definición de arquitectura
-- [1] Configuración del gateway LoRaWAN
-- [1] Modelos de datos y repositorios
-- [0] Servicios de procesamiento y alertas
-- [0] API REST y WebSocket
-- [0] Dashboard de visualización
-- [0] Pruebas e integración
+| Parámetro | Unidad | Rango seguro |
+|---|---|---|
+| pH | — | 6.5 – 8.5 |
+| Turbidez | NTU | < 5 |
+| Conductividad | µS/cm | 100 – 1000 |
+| Temperatura | °C | 10 – 30 |
+
+La clasificación resultante es **Buena**, **Aceptable**, **Riesgo** o **No apta**, calculada con los umbrales de `gateway/src/calidad.js` (reemplazo actual del Random Forest; cuando el modelo real esté integrado, `prediccionesRepository.js` guardará también su confianza).
 
 ---
 
 ## Notas
 
-- La base de datos NoSQL se elige por su flexibilidad ante estructuras de datos variables provenientes de distintos tipos de sensores.
-- Si la prioridad es análisis temporal (series de tiempo), **InfluxDB** es preferible sobre MongoDB.
-- El sistema está diseñado para ser **extensible**: agregar nuevos tipos de sensores o nuevas vistas no requiere modificar las capas subyacentes.
+- El frontend consume la API del mismo origen; no requiere build ni dependencias de frontend.
+- Chart.js se sirve localmente desde `frontend/vendor/` para que las gráficas funcionen sin internet.
+- El estado público del index es una vista general: no permite exportar datos ni ver el detalle por tanque.
+- La clasificación es una evaluación predictiva y **no reemplaza los análisis de laboratorio oficiales**.
 
 ---
 
-## Licencia y Autoría
+## Licencia y autoría
 
-© 2026 **waterQualitySensors** 
+© 2026 **Helio Mind Labs** · Equipo de investigadores.
 
-Todos los derechos reservados. Este proyecto, su código fuente, diseño de arquitectura y documentación son propiedad de helioMind Labs. Queda prohibida su reproducción, distribución o uso comercial sin autorización expresa por el equipo.
-
----
-
-## Ejecución integrada (frontend + gateway)
-
-El gateway Fastify sirve el sitio y su API en el mismo origen, por defecto en `http://localhost:4000`.
-
-### Simulación para presentaciones (sin sensores, MongoDB ni MQTT)
-
-En `gateway/.env`, pon `DEMO_MODE=true`, arranca con `npm run dev` desde `gateway` y abre `http://localhost:4000`. Inicia sesión con `demo@watermldetect.com` y la contraseña `Agua2026!`. Se mostrarán dos tanques y una semana de lecturas generadas; el modo se marca como **simulación** en `/api/health` y no escribe datos en MongoDB. Para volver al modo real, cambia `DEMO_MODE=false` y configura las conexiones de abajo.
-
-### Asistente con OpenRouter
-
-El reporte y el chat usan el prompt guardado en `gateway/prompts/asistente_agua.md`. Ese archivo le indica al modelo que interprete los registros como una consulta a la base de datos, que varíe la redacción en cada respuesta y que no invente valores.
-
-1. Crea una clave en <https://openrouter.ai/keys>.
-2. En `gateway/.env`, agrega `OPENROUTER_API_KEY=sk-or-v1-...` y el modelo que quieras usar en `OPENROUTER_MODEL`. Por defecto se usa `google/gemini-3.5-flash-lite`, un modelo económico y rápido. Si el principal falla o está saturado, se prueban los modelos de `OPENROUTER_FALLBACK_MODELS` (`upstage/solar-mini4,openrouter/free` por defecto).
-3. Reinicia el gateway. En `/api/health` verás el proveedor y el modelo activos.
-4. Si la clave falla, se agota la cuota o no hay internet, el asistente responde automáticamente con el análisis local, sin romper la demostración.
-
-El modelo principal consume crédito de OpenRouter (fracciones de centavo por respuesta). Revisa tu saldo antes de la presentación. Si prefieres no gastar, cambia `OPENROUTER_MODEL` por un modelo terminado en `:free`, aunque suelen tener límites temporales más estrictos.
-
-La clave vive solo en `gateway/.env`, que Git ignora. No la escribas en el README ni en el código. Si no configuras OpenRouter, el asistente sigue funcionando con reglas locales.
-
-1. En `gateway/.env`, configura `MONGO_URL`, `MQTT_URL`, `MQTT_USERNAME` y `MQTT_PASSWORD`. Define también un `TOKEN_SECRET` aleatorio de al menos 32 caracteres. No compartas ni subas este archivo.
-2. Desde la carpeta `gateway`, instala dependencias con `npm install`.
-3. Arranca el servicio con `npm run dev` y abre `http://localhost:4000`.
-4. Crea una cuenta desde **Crear mi cuenta**. Las cuentas y lecturas se guardan en MongoDB.
-5. Ejecuta `npm test` desde `gateway` para probar la entrega del frontend, la salud de la API, la autenticación básica y la normalización de lecturas sin necesitar MongoDB.
-
-El frontend usa datos reales (modo demo desactivado). Las rutas privadas disponibles son `POST /api/auth/registro`, `POST /api/auth/login`, `GET /api/tanques`, `GET /api/lecturas`, `GET /api/alertas`, `GET /api/ia/reporte` y `POST /api/ia/chat`. El asistente usa OpenRouter si existe `OPENROUTER_API_KEY`; si no, cae en reglas locales o en un servidor compatible con OpenAI configurado con `LLM_URL`.
-
-El gateway espera los parámetros `ph`, `turbidez`, `conductividad` y `temperature` (o `temperatura`) dentro del `decoded_payload` de TTN. Confirma que los nombres coincidan con el decoder real del sensor.
+Todos los derechos reservados. Este proyecto, su código fuente, diseño de arquitectura y documentación son propiedad de Helio Mind Labs. Queda prohibida su reproducción, distribución o uso comercial sin autorización expresa del equipo.

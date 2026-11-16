@@ -61,7 +61,7 @@ flowchart LR
     subgraph DATOS["Persistencia — MongoDB"]
         LEC[("lecturas\nDatos crudos del sensor")]
         PRED[("predicciones\nSalida del modelo ML")]
-        USR[("usuarios · tanques · reportes")]
+        USR[("usuarios · tanques · reportes\n(provisional: migrará a BD relacional)")]
     end
 
     subgraph CLIENTE["Frontend estático"]
@@ -235,17 +235,18 @@ Base: `http://localhost:4000/api`. Todas las rutas privadas requieren `Authoriza
 
 ## Base de datos
 
-MongoDB (`MONGO_DB`, por defecto `Monitoreo_Agua`):
+El sistema usa **dos colecciones principales** en MongoDB (`MONGO_DB`, por defecto `Monitoreo_Agua`):
 
 | Colección | Contenido |
 |---|---|
-| `usuarios` | Cuentas registradas (contraseñas con hash) |
-| `tanques` | Nodos de monitoreo y sus nombres |
 | `lecturas` | Datos crudos del sensor: `sensorId`, `recibidoEn`, `datos{}`, RSSI/SNR/batería |
-| `predicciones` | Salida del modelo: `nodoId`, `fecha`, `clase`, `confianza`, `modelo`, `entradas{}` |
-| `reportes` | Avisos de alteración enviados por usuarios a administradores |
+| `predicciones` | Salida del modelo ML: `nodoId`, `fecha`, `clase`, `confianza`, `modelo`, `entradas{}` |
 
-Cada lectura nueva que entra por MQTT o por `/sensor/registrar` genera automáticamente un documento en `predicciones` con la clase resultante y las entradas que la produjeron.
+La colección `predicciones` está **separada** de `lecturas` a propósito: los datos crudos del sensor nunca se mezclan con la salida del modelo, y cada predicción guarda las entradas que la produjeron para auditoría.
+
+**Datos provisionales en MongoDB:** las colecciones `usuarios`, `tanques` y `reportes` existen por ahora en la misma base, pero están previstas para migrar a una **base de datos relacional independiente** en una etapa posterior del proyecto.
+
+Cada lectura nueva que entra por MQTT o por `/registrar` genera automáticamente un documento en `predicciones` con la clase resultante y las entradas que la produjeron.
 
 ---
 

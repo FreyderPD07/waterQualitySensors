@@ -14,6 +14,32 @@ El sistema está diseñado para cubrir tres responsabilidades principales:
 
 ---
 
+## Ejecución rápida
+
+El gateway sirve el frontend y la API en el mismo puerto (`http://localhost:4000`). Solo necesitas un comando:
+
+```bash
+cd gateway
+npm install   # solo la primera vez
+npm run dev   # modo watch: recarga solo al guardar cambios
+```
+
+Luego abre `http://localhost:4000` en el navegador.
+
+**Modo demo** (sin MongoDB, MQTT ni sensores — ya configurado en `gateway/.env`):
+
+- Login admin: `demo@watermldetect.com` / `Agua2026!`
+- Para crear un usuario comunero usa **Crear mi cuenta** en el login.
+
+**Otros comandos:**
+
+```bash
+npm start        # producción (sin watch), desde gateway/
+npm test         # pruebas del gateway, desde gateway/
+```
+
+---
+
 ## Arquitectura del Sistema
 
 Se aplica una **Arquitectura en Capas (Layered Architecture)** con el patrón **MVC** en la capa de presentación. Este enfoque permite separar claramente las responsabilidades, facilitar el mantenimiento y escalar cada capa de forma independiente.

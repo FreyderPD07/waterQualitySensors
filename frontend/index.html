@@ -5,59 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Monitorea la calidad del agua de tu comunidad con WaterMLdetect.">
   <title>WaterMLdetect | Calidad del agua</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i_logo" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+    <symbol id="i_grafica" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></symbol>
+    <symbol id="i_chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="i_contacto" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+    <symbol id="i_salida" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+    <symbol id="i_usuario" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  </svg>
+
   <main class="pagina_inicio">
     <header class="encabezado_inicio">
-      <a class="marca marca_inicio" href="index.html">
-        <svg class="icono" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+      <a class="marca" href="index.html">
+        <svg class="icono" aria-hidden="true"><use href="#i_logo"/></svg>
         <span>WaterMLdetect</span>
       </a>
-      <nav aria-label="Acceso a la cuenta">
-        <a href="login.html">Iniciar sesión</a>
-        <a class="boton_principal" href="registro.html">Crear mi cuenta</a>
+      <nav class="nav_inicio" aria-label="Navegación principal">
+        <a href="#inicio">Inicio</a>
+        <a href="#estado_agua">Estado del agua</a>
+        <a href="#beneficios">Herramientas</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+      <nav class="acciones_inicio" aria-label="Acceso a la cuenta">
+        <a id="enlace_chat" class="enlace_nav_icono" href="chat.html" data-destino="chat"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg><span>Asistente IA</span></a>
+        <a id="enlace_cuenta" class="boton_principal" href="login.html" data-destino="dashboard"><span>Ingresar</span></a>
       </nav>
     </header>
 
-    <section class="contenido_inicio" aria-labelledby="titulo_inicio">
+    <section class="contenido_inicio" id="inicio" aria-labelledby="titulo_inicio">
       <div class="mensaje_inicio">
         <p class="etiqueta_inicio"><span aria-hidden="true"></span> Monitoreo inteligente para tu comunidad</p>
         <h1 id="titulo_inicio">Cuidar el agua empieza con <span>conocerla.</span></h1>
         <p class="descripcion_inicio">Sigue la calidad de tus tanques con mediciones claras, alertas oportunas y herramientas que ayudan a tu comunidad a tomar mejores decisiones.</p>
         <div class="acciones_inicio">
-          <a class="boton_principal" href="login.html">Ingresar al monitoreo <span aria-hidden="true">→</span></a>
+          <a class="boton_principal" href="login.html" data-destino="dashboard">Ingresar al monitoreo <span aria-hidden="true">→</span></a>
           <a class="boton_secundario" href="registro.html">Crear una cuenta</a>
         </div>
-        <p class="nota_inicio"><svg class="icono" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Información del agua para decisiones más conscientes.</p>
+        <p class="nota_inicio"><svg class="icono" aria-hidden="true"><use href="#i_logo"/></svg>Información del agua para decisiones más conscientes.</p>
       </div>
       <div class="ilustracion_inicio" role="img" aria-label="Ilustración de una gota de agua rodeada de ondas y datos de monitoreo">
         <svg class="ondas_inicio" viewBox="0 0 520 520" aria-hidden="true">
           <defs>
-            <linearGradient id="fondo_onda" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0" stop-color="#dff3ff"/>
-              <stop offset="1" stop-color="#a8dafa"/>
-            </linearGradient>
+            <radialGradient id="fondo_onda" cx=".5" cy=".45" r=".55">
+              <stop offset="0" stop-color="#dceefe"/>
+              <stop offset=".65" stop-color="#c8e6fa"/>
+              <stop offset="1" stop-color="#e8f4fd"/>
+            </radialGradient>
             <linearGradient id="gota_agua" x1=".2" x2=".8" y1="0" y2="1">
-              <stop offset="0" stop-color="#51b8ee"/>
-              <stop offset="1" stop-color="#1769b5"/>
+              <stop offset="0" stop-color="#5cc8f2"/>
+              <stop offset=".55" stop-color="#1d8fd1"/>
+              <stop offset="1" stop-color="#0d5aa8"/>
             </linearGradient>
-          </defs>|
-          <circle cx="260" cy="260" r="220" fill="url(#fondo_onda)" opacity=".72"/>
-          <circle cx="260" cy="260" r="174" fill="none" stroke="#77c2ed" stroke-dasharray="3 12" stroke-width="2"/>
-          <circle cx="260" cy="260" r="133" fill="#ffffff" opacity=".8"/>
+            <linearGradient id="brillo_gota" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="260" cy="260" r="220" fill="url(#fondo_onda)"/>
+          <circle cx="260" cy="260" r="220" fill="none" stroke="#1d6fd1" stroke-opacity=".3" stroke-width="1.5"/>
+          <circle cx="260" cy="260" r="174" fill="none" stroke="#0e9fd8" stroke-opacity=".2" stroke-dasharray="2 10" stroke-width="1.5"/>
+          <circle cx="260" cy="260" r="133" fill="#ffffff" stroke="#1d6fd1" stroke-opacity=".3"/>
           <path d="M260 128c-35 45-77 92-77 143a77 77 0 0 0 154 0c0-51-42-98-77-143Z" fill="url(#gota_agua)"/>
-          <path d="M221 269c3 27 19 43 43 48" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="8" opacity=".72"/>
-          <circle cx="115" cy="172" r="9" fill="#4fb0ea"/>
-          <circle cx="389" cy="200" r="7" fill="#1769b5"/>
-          <circle cx="363" cy="369" r="10" fill="#4fb0ea"/>
-          <path d="M124 354h65m-65 13h42" fill="none" stroke="#79bee7" stroke-linecap="round" stroke-width="5"/>
-          <path d="m349 143 12 12 24-27" fill="none" stroke="#1e8e3e" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+          <path d="M260 128c-35 45-77 92-77 143a77 77 0 0 0 154 0c0-51-42-98-77-143Z" fill="url(#brillo_gota)" opacity=".4"/>
+          <path d="M221 269c3 27 19 43 43 48" fill="none" stroke="#ffffff" stroke-opacity=".9" stroke-linecap="round" stroke-width="7"/>
+          <circle cx="115" cy="172" r="9" fill="#0e9fd8" opacity=".85"/>
+          <circle cx="389" cy="200" r="7" fill="#1d6fd1" opacity=".8"/>
+          <circle cx="363" cy="369" r="10" fill="#12805c" opacity=".85"/>
+          <path d="M124 354h65m-65 13h42" fill="none" stroke="#0e9fd8" stroke-opacity=".55" stroke-linecap="round" stroke-width="4"/>
+          <path d="m349 143 12 12 24-27" fill="none" stroke="#12805c" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
         </svg>
         <article class="tarjeta_flotante tarjeta_medicion">
           <span class="punto_estado" aria-hidden="true"></span>
           <div><strong>Calidad del agua</strong><small>Información clara para tu comunidad</small></div>
-          <svg class="icono" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
+          <svg class="icono" aria-hidden="true"><use href="#i_logo"/></svg>
         </article>
         <article class="tarjeta_flotante tarjeta_lectura">
           <span class="icono_grafica" aria-hidden="true">
@@ -69,26 +95,78 @@
       </div>
     </section>
 
-    <section class="beneficios_inicio" aria-label="Herramientas de monitoreo">
+    <section class="estado_publico" id="estado_agua" aria-labelledby="titulo_estado">
+      <header class="estado_publico_encabezado">
+        <div>
+          <p class="etiqueta_inicio"><span aria-hidden="true"></span> Datos en tiempo real</p>
+          <h2 id="titulo_estado">Estado actual del agua</h2>
+        </div>
+        <p class="estado_publico_resumen" id="estado_publico_resumen">Consultando los sensores…</p>
+      </header>
+
+      <div class="estado_publico_cuerpo">
+        <section class="tarjetas_publicas" id="tarjetas_publicas" aria-label="Estado por tanque">
+          <article class="tarjeta_publica tarjeta_publica_cargando"><p>Cargando estado de los tanques…</p></article>
+        </section>
+
+        <article class="panel_publico panel_grafica_publica">
+          <header class="encabezado_panel_publico">
+            <h3>Tendencia de los últimos 7 días</h3>
+            <label class="selector_variable_publica" for="variable_publica">Variable
+              <select id="variable_publica">
+                <option value="ph">pH</option>
+                <option value="turbidez">Turbidez (NTU)</option>
+                <option value="conductividad">Conductividad (µS/cm)</option>
+                <option value="temperatura">Temperatura (°C)</option>
+              </select>
+            </label>
+          </header>
+          <canvas id="grafica_publica" aria-label="Gráfica de tendencia general del agua"></canvas>
+          <p class="nota_publica">Vista general del monitoreo. Para ver el detalle por tanque, las alertas y el historial completo, <a href="login.html" data-destino="dashboard">inicia sesión</a>.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="beneficios_inicio" id="beneficios" aria-label="Herramientas de monitoreo">
       <article>
-        <span class="icono_beneficio" aria-hidden="true"><svg class="icono" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14"/></svg></span>
+        <span class="icono_beneficio" aria-hidden="true"><svg class="icono" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M12 3v18"/></svg></span>
         <div><h2>Lecturas fáciles de entender</h2><p>Consulta pH, turbidez, conductividad y temperatura.</p></div>
       </article>
       <article>
-        <span class="icono_beneficio" aria-hidden="true"><svg class="icono" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></svg></span>
+        <span class="icono_beneficio" aria-hidden="true"><svg class="icono" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span>
         <div><h2>Alertas a tiempo</h2><p>Identifica cambios que requieren atención.</p></div>
       </article>
       <article>
-        <span class="icono_beneficio" aria-hidden="true"><svg class="icono" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg></span>
+        <span class="icono_beneficio" aria-hidden="true"><svg class="icono" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
         <div><h2>Historial y tendencias</h2><p>Explora las mediciones y cómo cambian con el tiempo.</p></div>
       </article>
     </section>
 
+    <section class="contacto_inicio" id="contacto" aria-labelledby="titulo_contacto">
+      <div>
+        <h2 id="titulo_contacto">¿Dudas sobre el monitoreo?</h2>
+        <p>El asistente HelioWater responde preguntas sobre la calidad del agua y el equipo de investigación está atento a tus sugerencias.</p>
+      </div>
+      <div class="contacto_acciones">
+        <a class="boton_secundario" href="chat.html" data-destino="chat"><svg class="icono" aria-hidden="true"><use href="#i_chat"/></svg> Preguntar a HelioWater</a>
+        <a class="boton_secundario" href="login.html" data-destino="dashboard"><svg class="icono" aria-hidden="true"><use href="#i_usuario"/></svg> Ingresa con tu cuenta</a>
+      </div>
+    </section>
+
     <footer class="pie_inicio">
-      <span class="marca marca_pie"><svg class="icono" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg><span>WaterMLdetect</span></span>
-      <span>Información para el cuidado del agua de tu comunidad.</span>
+      <nav class="pie_enlaces" aria-label="Enlaces del pie de página">
+        <a href="#inicio">Inicio</a>
+        <a href="#estado_agua">Estado del agua</a>
+        <a href="chat.html" data-destino="chat">Asistente IA</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+      <span class="marca"><svg class="icono" aria-hidden="true"><use href="#i_logo"/></svg><span>WaterMLdetect</span></span>
+      <p class="pie_credito">Desarrollado con <strong>Helio Mind Labs</strong> y un equipo de investigadores.</p>
     </footer>
   </main>
+
+  <!-- Chart.js se sirve localmente para que las gráficas funcionen sin depender de internet. -->
+  <script src="vendor/chart.umd.js"></script>
   <script src="app/index.js"></script>
 </body>
 </html>

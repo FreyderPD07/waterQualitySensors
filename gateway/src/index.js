@@ -9,6 +9,7 @@ import { conectMongoDB, cerrarMongoDB } from './db.js';
 import { connectMqtt, cerrarMqtt } from './mqtt.js';
 import { authRoutes, prepararIndices } from './auth.js';
 import { apiRoutes } from './api.js';
+import { reportesRoutes } from './reportes.js';
 import { ttnSensorRoutes } from './ttnSensor.js';
 
 const directorio = path.dirname(fileURLToPath(import.meta.url));
@@ -28,6 +29,7 @@ await app.register(fastifyStatic, {
 
 await app.register(authRoutes);
 await app.register(apiRoutes);
+await app.register(reportesRoutes);
 await app.register(ttnSensorRoutes);
 
 app.setNotFoundHandler((request, reply) => {

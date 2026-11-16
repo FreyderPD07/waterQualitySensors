@@ -11,16 +11,17 @@ Desarrollado con **Helio Mind Labs** y un equipo de investigadores.
 1. [Características](#características)
 2. [Arquitectura](#arquitectura)
 3. [Estructura del proyecto](#estructura-del-proyecto)
-4. [Ejecución rápida](#ejecución-rápida)
-5. [Modo demo](#modo-demo)
-6. [Configuración (variables de entorno)](#configuración-variables-de-entorno)
-7. [Roles y permisos](#roles-y-permisos)
-8. [API REST](#api-rest)
-9. [Base de datos](#base-de-datos)
-10. [Asistente IA](#asistente-ia)
-11. [Pruebas](#pruebas)
-12. [Parámetros monitoreados](#parámetros-monitoreados)
-13. [Notas](#notas)
+4. [Flujo de funcionamiento](#flujo-de-funcionamiento)
+5. [Ejecución rápida](#ejecución-rápida)
+6. [Modo demo](#modo-demo)
+7. [Configuración (variables de entorno)](#configuración-variables-de-entorno)
+8. [Roles y permisos](#roles-y-permisos)
+9. [API REST](#api-rest)
+10. [Base de datos](#base-de-datos)
+11. [Asistente IA](#asistente-ia)
+12. [Pruebas](#pruebas)
+13. [Parámetros monitoreados](#parámetros-monitoreados)
+14. [Notas](#notas)
 
 ---
 
@@ -133,6 +134,49 @@ monitoreoCalidadDeAgua/
 │
 └── README.md
 ```
+
+---
+
+## Flujo de funcionamiento
+
+Así viaja un dato desde el sensor hasta la pantalla del usuario:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant S as Sensor LoRaWAN
+    participant TTN as The Things Network
+    participant GW as Gateway (Fastify)
+    participant DB as MongoDB
+    participant U as Usuario (navegador)
+
+    S->>TTN: Lectura (pH, turbidez, conductividad, temp.)
+    TTN->>GW: Mensaje MQTT (uplink)
+    GW->>DB: Guarda dato crudo en "lecturas"
+    GW->>GW: Normaliza y clasifica (calidad.js)
+    GW->>DB: Guarda predicción en "predicciones"
+
+    U->>GW: POST /api/auth/login
+    GW-->>U: JWT (rol admin o comunero)
+
+    U->>GW: GET /api/lecturas, /predicciones, /alertas
+    GW-->>U: Datos filtrados por periodo y nodo
+    U->>U: Renderiza dashboard, gráficas y tarjetas ML
+
+    U->>GW: POST /api/ia/chat (pregunta + historial)
+    GW->>GW: Consulta contexto de lecturas + OpenRouter
+    GW-->>U: Respuesta de HelioWater
+
+    U->>GW: POST /api/reportes (alteración detectada)
+    GW->>DB: Guarda reporte para el administrador
+```
+
+**Puntos clave del flujo:**
+
+- Las lecturas crudas y las predicciones del modelo se escriben en **colecciones separadas** en el mismo evento de ingesta.
+- La página pública (`/api/publico/estado`) no pide token y solo devuelve resúmenes, nunca datos exportables.
+- En `DEMO_MODE=true` los pasos 1–5 se simulan en memoria y nada se escribe en MongoDB.
+- Si OpenRouter falla, el asistente responde con el análisis local sin interrumpir el servicio.
 
 ---
 
